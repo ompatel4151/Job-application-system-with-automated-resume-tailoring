@@ -101,3 +101,17 @@ def test_render_markdown_full_document(sample_resume_content):
     for section in ("## Summary", "## Skills", "## Experience", "## Projects", "## Education"):
         assert section in md
     assert "- Built internal tooling in Python." in md
+
+
+def test_missing_api_key_raises_friendly_error(monkeypatch, sample_resume_content):
+    from app.services.tailoring import tailor_resume
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    with pytest.raises(RuntimeError, match="not configured"):
+        tailor_resume(
+            resume_content=sample_resume_content,
+            job_description="Python role",
+            company="Globex",
+            role="Backend Engineer",
+        )
