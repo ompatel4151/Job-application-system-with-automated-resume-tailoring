@@ -51,13 +51,24 @@ def tailor_resume(
         f"<job_description>\n{job_description}\n</job_description>"
     )
 
-    response = client.messages.parse(
-        model=ANTHROPIC_MODEL,
-        max_tokens=16000,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_prompt}],
-        output_format=TailoringResult,
-    )
+    try:
+        response = client.messages.parse(
+            model=ANTHROPIC_MODEL,
+            max_tokens=16000,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_prompt}],
+            output_format=TailoringResult,
+        )
+    except TypeError as exc:  # SDK raises TypeError when no auth method is configured
+        raise RuntimeError(
+            "Anthropic API key is not configured. Set ANTHROPIC_API_KEY in your .env file."
+        ) from exc
+    except anthropic.AuthenticationError as exc:
+        raise RuntimeError("Anthropic API key was rejected. Check ANTHROPIC_API_KEY.") from exc
+    except anthropic.APIConnectionError as exc:
+        raise RuntimeError("Could not reach the Anthropic API. Check your network.") from exc
+    except anthropic.APIStatusError as exc:
+        raise RuntimeError(f"Anthropic API error ({exc.status_code}): {exc.message}") from exc
     if response.stop_reason == "refusal":
         raise RuntimeError("The model declined to process this request.")
     result = response.parsed_output
