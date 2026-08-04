@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Application Tracker</title>
+<style>
+  :root {
+    --bg: #f6f4ef; --card: #ffffff; --ink: #232323; --muted: #6b6b6b;
+    --accent: #b3562e; --border: #e3ded4; --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: Georgia, 'Times New Roman', serif; background: var(--bg); color: var(--ink); }
+  header { padding: 1.4rem 2rem; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 1rem; }
+  header h1 { font-size: 1.5rem; font-weight: normal; }
+  header .stats { color: var(--muted); font-size: .9rem; margin-left: auto; }
+  main { max-width: 1100px; margin: 0 auto; padding: 1.5rem 2rem; }
+  section { margin-bottom: 2rem; }
+  h2 { font-size: 1.1rem; margin-bottom: .8rem; border-bottom: 2px solid var(--accent); display: inline-block; padding-bottom: .15rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
+  .card h3 { font-size: 1rem; }
+  .card .role { color: var(--muted); font-style: italic; margin-bottom: .5rem; }
+  .badge { display: inline-block; font-size: .75rem; padding: .1rem .55rem; border-radius: 99px; border: 1px solid var(--border); background: var(--bg); font-family: sans-serif; }
+  .badge.applied { background: #e8f0e4; } .badge.interview { background: #fdf3d7; }
+  .badge.offer { background: #dcefe0; } .badge.rejected { background: #f5e0dc; }
+  .row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin-top: .6rem; }
+  button, select, input, textarea { font: inherit; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: .35rem .8rem; cursor: pointer; font-family: sans-serif; font-size: .82rem; }
+  button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  button:disabled { opacity: .5; cursor: wait; }
+  select, input, textarea { border: 1px solid var(--border); border-radius: 6px; padding: .4rem .5rem; background: #fff; width: 100%; }
+  form.grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
+  form.grid .full { grid-column: 1 / -1; }
+  label { font-size: .8rem; color: var(--muted); font-family: sans-serif; display: block; margin-bottom: .2rem; }
+  dialog { border: 1px solid var(--border); border-radius: var(--radius); max-width: 760px; width: 90vw; max-height: 85vh; padding: 1.2rem; }
+  dialog::backdrop { background: rgba(0,0,0,.35); }
+  pre.md { white-space: pre-wrap; font-size: .85rem; background: var(--bg); padding: 1rem; border-radius: 6px; max-height: 45vh; overflow: auto; }
+  .analysis { font-size: .9rem; margin: .8rem 0; }
+  .analysis .kw { display: inline-block; margin: .15rem; }
+  .kw.hit { color: #2c6e3f; } .kw.miss { color: #a33; }
+  .empty { color: var(--muted); font-style: italic; }
+  #toast { position: fixed; bottom: 1rem; right: 1rem; background: var(--ink); color: #fff; padding: .6rem 1rem; border-radius: 6px; font-family: sans-serif; font-size: .85rem; display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Job Application Tracker</h1>
+  <span class="stats" id="stats"></span>
+</header>
+<main>
+  <section>
+    <h2>Add application</h2>
+    <form class="grid" id="app-form">
+      <div><label>Company</label><input name="company" required></div>
+      <div><label>Role</label><input name="role" required></div>
+      <div><label>Status</label>
+        <select name="status">
+          <option>saved</option><option>applied</option><option>screening</option>
+          <option>interview</option><option>offer</option><option>rejected</option>
+        </select>
+      </div>
+      <div><label>Job URL</label><input name="job_url" placeholder="https://..."></div>
+      <div class="full"><label>Job description (paste it here — used for tailoring)</label>
+        <textarea name="job_description" rows="4"></textarea></div>
+      <div class="full"><button type="submit">Add application</button></div>
+    </form>
+  </section>
+
+  <section>
+    <h2>Pipeline</h2>
+    <div class="row" style="margin-bottom:.8rem">
+      <label style="margin:0">Filter:</label>
+      <select id="filter" style="width:auto">
+        <option value="">all</option><option>saved</option><option>applied</option>
+        <option>screening</option><option>interview</option><option>offer</option><option>rejected</option>
+      </select>
+    </div>
+    <div class="cards" id="apps"></div>
+  </section>
+
+  <section>
+    <h2>Base resumes</h2>
+    <p style="margin-bottom:.6rem; color:var(--muted); font-size:.9rem">
+      Paste your resume as JSON (see <code>/docs</code> for the schema). The default resume is used for tailoring.
+    </p>
+    <form class="grid" id="resume-form">
+      <div><label>Name</label><input name="name" required placeholder="e.g. Software Engineer base"></div>
+      <div><label>Default?</label>
+        <select name="is_default"><option value="true">yes</option><option value="false">no</option></select>
+      </div>
+      <div class="full"><label>Resume content (JSON)</label>
+        <textarea name="content" rows="6" placeholder='{"full_name": "...", "contact": "...", "summary": "...", "skills": [], "experience": [], "projects": [], "education": []}'></textarea></div>
+      <div class="full"><button type="submit">Save resume</button></div>
+    </form>
+    <div class="cards" id="resumes" style="margin-top:1rem"></div>
+  </section>
+</main>
+
+<dialog id="tailor-dialog">
+  <h2 id="tailor-title">Tailored resume</h2>
+  <div id="tailor-body"></div>
+  <div class="row"><button class="secondary" onclick="document.getElementById('tailor-dialog').close()">Close</button></div>
+</dialog>
+<div id="toast"></div>
+
+<script>
+const api = (path, opts) => fetch(path, opts).then(async r => {
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  return r.status === 204 ? null : r.json();
+});
+const toast = msg => {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3500);
+};
+const esc = s => (s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function loadStats() {
+  const s = await api('/api/applications/stats');
+  document.getElementById('stats').textContent =
+    `${s.total} applications · ${s.by_status.applied} applied · ${s.by_status.interview} interviewing · ${s.by_status.offer} offers`;
+}
+
+async function loadApps() {
+  const filter = document.getElementById('filter').value;
+  const apps = await api('/api/applications' + (filter ? `?status=${filter}` : ''));
+  const el = document.getElementById('apps');
+  el.innerHTML = apps.length ? '' : '<p class="empty">No applications yet.</p>';
+  for (const a of apps) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <h3>${esc(a.company)} <span class="badge ${a.status}">${a.status}</span></h3>
+      <div class="role">${esc(a.role)}</div>
+      ${a.job_url ? `<a href="${esc(a.job_url)}" target="_blank" style="font-size:.85rem">job posting ↗</a>` : ''}
+      <div class="row">
+        <select data-status="${a.id}" style="width:auto">
+          ${['saved','applied','screening','interview','offer','rejected'].map(s =>
+            `<option ${s === a.status ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+        <button data-tailor="${a.id}" ${a.job_description ? '' : 'disabled title="No job description"'}>Tailor resume</button>
+        ${a.tailored_count ? `<button class="secondary" data-view="${a.id}">View tailored (${a.tailored_count})</button>` : ''}
+        <button class="secondary" data-del="${a.id}">Delete</button>
+      </div>`;
+    el.appendChild(card);
+  }
+}
+
+async function loadResumes() {
+  const resumes = await api('/api/resumes');
+  const el = document.getElementById('resumes');
+  el.innerHTML = resumes.length ? '' : '<p class="empty">No resumes yet — add your base resume above.</p>';
+  for (const r of resumes) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <h3>${esc(r.name)} ${r.is_default ? '<span class="badge offer">default</span>' : ''}</h3>
+      <div class="role">${esc(r.content.full_name)} · ${(r.content.skills || []).length} skills · ${(r.content.experience || []).length} roles</div>
+      <div class="row">
+        ${r.is_default ? '' : `<button class="secondary" data-mkdefault="${r.id}">Make default</button>`}
+        <button class="secondary" data-delresume="${r.id}">Delete</button>
+      </div>`;
+    el.appendChild(card);
+  }
+}
+
+function showTailored(t, title) {
+  const m = t.match_analysis;
+  document.getElementById('tailor-title').textContent = title;
+  document.getElementById('tailor-body').innerHTML = `
+    <div class="analysis">
+      <strong>Match score: ${m.match_score}/100</strong><br>
+      <div>${m.matched_keywords.map(k => `<span class="kw hit">✓ ${esc(k)}</span>`).join('')}</div>
+      <div>${m.missing_keywords.map(k => `<span class="kw miss">✗ ${esc(k)}</span>`).join('')}</div>
+      <ul style="margin:.5rem 0 0 1.2rem">${m.recommendations.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
+    </div>
+    <pre class="md">${esc(t.markdown)}</pre>
+    <a href="/api/tailored/${t.id}/markdown" download><button class="secondary" style="margin-top:.5rem">Download Markdown</button></a>`;
+  document.getElementById('tailor-dialog').showModal();
+}
+
+document.getElementById('app-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+  try {
+    await api('/api/applications', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
+    e.target.reset(); refresh();
+  } catch (err) { toast(err.message); }
+});
+
+document.getElementById('resume-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+  try {
+    const content = JSON.parse(data.content || '{}');
+    await api('/api/resumes', {method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name: data.name, is_default: data.is_default === 'true', content})});
+    e.target.reset(); loadResumes();
+  } catch (err) { toast(err.message); }
+});
+
+document.getElementById('filter').addEventListener('change', loadApps);
+
+document.body.addEventListener('click', async e => {
+  const b = e.target;
+  try {
+    if (b.dataset.tailor) {
+      b.disabled = true; b.textContent = 'Tailoring…';
+      const t = await api(`/api/applications/${b.dataset.tailor}/tailor`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
+      showTailored(t, 'Tailored resume'); refresh();
+    } else if (b.dataset.view) {
+      const list = await api(`/api/applications/${b.dataset.view}/tailored`);
+      if (list.length) showTailored(list[0], `Latest tailored resume (${list.length} total)`);
+    } else if (b.dataset.del) {
+      await api(`/api/applications/${b.dataset.del}`, {method: 'DELETE'}); refresh();
+    } else if (b.dataset.delresume) {
+      await api(`/api/resumes/${b.dataset.delresume}`, {method: 'DELETE'}); loadResumes();
+    } else if (b.dataset.mkdefault) {
+      await api(`/api/resumes/${b.dataset.mkdefault}`, {method: 'PUT', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({is_default: true})});
+      loadResumes();
+    }
+  } catch (err) { toast(err.message); if (b.dataset.tailor) { b.disabled = false; b.textContent = 'Tailor resume'; } }
+});
+
+document.body.addEventListener('change', async e => {
+  if (e.target.dataset.status) {
+    try {
+      await api(`/api/applications/${e.target.dataset.status}`, {
+        method: 'PATCH', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status: e.target.value})});
+      refresh();
+    } catch (err) { toast(err.message); }
+  }
+});
+
+function refresh() { loadApps(); loadStats(); }
+refresh(); loadResumes();
+</script>
+</body>
+</html>
