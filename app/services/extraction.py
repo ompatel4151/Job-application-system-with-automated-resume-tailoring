@@ -144,7 +144,11 @@ def _parse_with_groq(content: Any, *, model: str, strict: bool) -> ResumeContent
     try:
         response = client.chat.completions.create(
             model=model,
-            max_tokens=8000,
+            # Groq counts reserved output tokens against the per-minute rate
+            # limit (8k on the free tier), so an oversized reservation makes a
+            # single call exceed the budget on its own. A structured resume is
+            # well under 4k tokens.
+            max_tokens=4000,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": content},
