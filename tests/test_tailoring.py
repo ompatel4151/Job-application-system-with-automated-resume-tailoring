@@ -107,8 +107,9 @@ def test_missing_api_key_raises_friendly_error(monkeypatch, sample_resume_conten
     from app.config import settings
     from app.services.tailoring import tailor_resume
 
+    monkeypatch.setattr(settings, "llm_provider", "claude")
     monkeypatch.setattr(settings, "anthropic_api_key", None)
-    with pytest.raises(RuntimeError, match="not configured"):
+    with pytest.raises(RuntimeError, match="Anthropic API key is not configured"):
         tailor_resume(
             resume_content=sample_resume_content,
             job_description="Python role",
