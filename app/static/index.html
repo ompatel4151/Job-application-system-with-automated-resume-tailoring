@@ -33,6 +33,15 @@
   form.grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
   form.grid .full { grid-column: 1 / -1; }
   label { font-size: .8rem; color: var(--muted); font-family: sans-serif; display: block; margin-bottom: .2rem; }
+  .upload { background: var(--card); border: 1px dashed var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: .7rem; text-align: center; transition: border-color .15s, background .15s; }
+  .upload.dragover { border-color: var(--accent); background: #fbf6f2; }
+  .upload.busy { opacity: .6; }
+  .upload-label { display: block; cursor: pointer; margin: 0; font-size: .9rem; color: var(--ink); }
+  .upload-label strong { display: block; font-family: Georgia, serif; font-weight: normal; }
+  .upload-label span { font-size: .8rem; color: var(--muted); font-family: sans-serif; }
+  .upload input[type=file] { display: none; }
+  .upload-status { font-family: sans-serif; font-size: .8rem; margin-top: .6rem; color: var(--muted); }
+  .upload-status.error { color: #a33; }
   dialog { border: 1px solid var(--border); border-radius: var(--radius); max-width: 760px; width: 90vw; max-height: 85vh; padding: 1.2rem; }
   dialog::backdrop { background: rgba(0,0,0,.35); }
   pre.md { white-space: pre-wrap; font-size: .85rem; background: var(--bg); padding: 1rem; border-radius: 6px; max-height: 45vh; overflow: auto; }
@@ -82,8 +91,20 @@
   <section>
     <h2>Base resumes</h2>
     <p style="margin-bottom:.6rem; color:var(--muted); font-size:.9rem">
-      Paste your resume as JSON (see <code>/docs</code> for the schema). The default resume is used for tailoring.
+      Upload a PDF or photo of your resume and it will be read into the form below,
+      or paste it as JSON (see <code>/docs</code> for the schema).
+      The default resume is used for tailoring.
     </p>
+
+    <div class="upload" id="dropzone">
+      <label for="resume-file" class="upload-label">
+        <strong>Upload a resume</strong>
+        <span>Drag a file here, or <u>choose one</u> — PDF, JPEG, PNG or WebP, up to 10MB</span>
+      </label>
+      <input type="file" id="resume-file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp">
+      <p class="upload-status" id="upload-status" hidden></p>
+    </div>
+
     <form class="grid" id="resume-form">
       <div><label>Name</label><input name="name" required placeholder="e.g. Software Engineer base"></div>
       <div><label>Default?</label>
@@ -196,6 +217,53 @@ document.getElementById('app-form').addEventListener('submit', async e => {
     e.target.reset(); refresh();
   } catch (err) { toast(err.message); }
 });
+
+// ---- Upload a resume file and read it into the form ----
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('resume-file');
+const uploadStatus = document.getElementById('upload-status');
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+const setStatus = (msg, isError) => {
+  uploadStatus.textContent = msg;
+  uploadStatus.classList.toggle('error', !!isError);
+  uploadStatus.hidden = !msg;
+};
+
+async function uploadResume(file) {
+  if (!file) return;
+  if (file.size > MAX_UPLOAD_BYTES) {
+    setStatus(`${file.name} is ${(file.size / 1e6).toFixed(1)}MB — the limit is 10MB.`, true);
+    return;
+  }
+  dropzone.classList.add('busy');
+  setStatus(`Reading ${file.name}…`);
+  const body = new FormData();
+  body.append('file', file);
+  try {
+    const content = await api('/api/resumes/parse', {method: 'POST', body});
+    const form = document.getElementById('resume-form');
+    form.content.value = JSON.stringify(content, null, 2);
+    if (!form.name.value) {
+      // Seed the name from the filename so saving is one click away.
+      form.name.value = file.name.replace(/\.[^.]+$/, '');
+    }
+    setStatus('Read it — check the fields below, then save.');
+    form.content.scrollIntoView({behavior: 'smooth', block: 'center'});
+  } catch (err) {
+    setStatus(err.message, true);
+  } finally {
+    dropzone.classList.remove('busy');
+    fileInput.value = '';   // let the same file be re-picked after a failure
+  }
+}
+
+fileInput.addEventListener('change', e => uploadResume(e.target.files[0]));
+['dragenter', 'dragover'].forEach(evt =>
+  dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('dragover'); }));
+['dragleave', 'drop'].forEach(evt =>
+  dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('dragover'); }));
+dropzone.addEventListener('drop', e => uploadResume(e.dataTransfer.files[0]));
 
 document.getElementById('resume-form').addEventListener('submit', async e => {
   e.preventDefault();

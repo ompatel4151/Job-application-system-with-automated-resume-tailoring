@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     # Only the gpt-oss models support Groq's strict structured outputs, which is
     # what guarantees the response matches the resume schema.
     groq_model: str = "openai/gpt-oss-120b"
+    # gpt-oss is text-only, so reading an uploaded resume image needs a
+    # separate multimodal model (best-effort JSON, not strict schemas).
+    groq_vision_model: str = "qwen/qwen3.6-27b"
 
     def resolve_provider(self) -> Literal["claude", "groq"]:
         """Pick the backend to use, given the configured keys."""

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app import models
 from app.database import get_db
 from app.models import utcnow
-from app.schemas import ResumeCreate, ResumeOut, ResumeUpdate
+from app.schemas import ResumeContent, ResumeCreate, ResumeOut, ResumeUpdate
+from app.services import extraction
 
 router = APIRouter(prefix="/api/resumes", tags=["resumes"])
 
@@ -30,6 +31,68 @@ def create_resume(payload: ResumeCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(resume)
     return resume
+
+
+_EXTENSION_TYPES = {
+    ".pdf": "application/pdf",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+}
+
+
+def _media_type(upload: UploadFile) -> str:
+    """Trust the browser's content type, falling back to the extension.
+
+    Some browsers send application/octet-stream for a drag-and-dropped file.
+    """
+    declared = (upload.content_type or "").split(";")[0].strip().lower()
+    if declared in extraction.SUPPORTED_MEDIA_TYPES:
+        return declared
+    filename = (upload.filename or "").lower()
+    for suffix, media_type in _EXTENSION_TYPES.items():
+        if filename.endswith(suffix):
+            return media_type
+    return declared or "application/octet-stream"
+
+
+async def _read_capped(upload: UploadFile) -> bytes:
+    """Read the upload, stopping one byte past the limit.
+
+    Reading in chunks means an oversized upload is rejected without pulling the
+    whole thing into memory first.
+    """
+    limit = extraction.MAX_UPLOAD_BYTES
+    chunks: list[bytes] = []
+    total = 0
+    while chunk := await upload.read(64 * 1024):
+        total += len(chunk)
+        chunks.append(chunk)
+        if total > limit:
+            raise HTTPException(
+                413, f"File is larger than the {limit // 1_000_000}MB limit."
+            )
+    return b"".join(chunks)
+
+
+@router.post("/parse", response_model=ResumeContent)
+async def parse_resume_file(file: UploadFile = File(...)):
+    """Read an uploaded PDF or image into structured resume content.
+
+    Deliberately does not save: extraction can misread a layout, so the
+    dashboard shows the result for review and the user saves it themselves
+    through the normal create endpoint.
+    """
+    data = await _read_capped(file)
+    try:
+        return extraction.extract_resume_content(data, _media_type(file))
+    except extraction.UnsupportedFileType as exc:
+        raise HTTPException(415, str(exc)) from exc
+    except extraction.FileTooLarge as exc:
+        raise HTTPException(413, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(502, str(exc)) from exc
 
 
 @router.get("", response_model=list[ResumeOut])
