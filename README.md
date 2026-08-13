@@ -20,6 +20,10 @@ concrete recommendations.
 - **Structured resumes** — resumes are stored as structured JSON (summary,
   skills, experience, projects, education), not opaque text, so they can be
   programmatically rewritten and rendered.
+- **Resume upload** — drop in a PDF, JPEG, PNG or WebP and it's parsed into
+  that structure for review before saving. Text PDFs are read locally with
+  pypdf so no vision tokens are spent; scans and photos fall back to a
+  multimodal model.
 - **AI resume tailoring** — one click sends your base resume plus the job
   description to Claude, which rewrites bullet points to mirror the job's
   vocabulary, reorders skills by relevance, and trims irrelevant content —
@@ -102,6 +106,12 @@ On Groq, only the `openai/gpt-oss-*` models support strict schemas, so
 `GROQ_MODEL` defaults to `openai/gpt-oss-120b`. Note that Groq's free tier
 allows 6,000 tokens per minute and one tailoring call can consume most of
 that — expect roughly one request per minute before hitting a rate limit.
+
+Uploading a resume image needs vision, which `gpt-oss` does not have, so that
+path uses `GROQ_VISION_MODEL` (default `qwen/qwen3.6-27b`) with best-effort
+JSON validated against the schema. Claude reads PDFs and images natively, so
+it is the better choice for scanned resumes — Groq cannot read a PDF that has
+no text layer.
 
 ### Typical workflow
 
