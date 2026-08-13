@@ -43,6 +43,11 @@ Then add two environment variables under **Environment**:
 | `DATABASE_URL` | the Session pooler string from step 1 |
 | `ANTHROPIC_API_KEY` | your key from [platform.claude.com](https://platform.claude.com) |
 
+To run tailoring on Groq's free tier instead, set `GROQ_API_KEY`
+(from [console.groq.com/keys](https://console.groq.com/keys)) in place of
+`ANTHROPIC_API_KEY`. Either key alone is enough; see the README for the
+rate-limit caveat.
+
 Set these in Render's dashboard only — never commit them. `render.yaml` marks
 both `sync: false` precisely so they are not stored in the repo.
 

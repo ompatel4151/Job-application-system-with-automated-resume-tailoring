@@ -76,13 +76,32 @@ cd Job-application-system-with-automated-resume-tailoring
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-cp .env.example .env      # add your ANTHROPIC_API_KEY
+cp .env.example .env      # add an API key — see "Tailoring backend" below
 
 uvicorn app.main:app --reload
 ```
 
 Open <http://localhost:8000> for the dashboard, or
 <http://localhost:8000/docs> for the interactive API docs.
+
+### Tailoring backend
+
+Tailoring runs against either provider behind a single interface, both using
+schema-constrained structured outputs so the response is always valid against
+the resume schema:
+
+| Provider | Env var | Notes |
+|---|---|---|
+| Claude | `ANTHROPIC_API_KEY` | Default. Uses the Anthropic SDK's `messages.parse`. |
+| Groq | `GROQ_API_KEY` | OpenAI-compatible; free tier, no card required. |
+
+Set one key and it is used automatically; set both and Claude wins. Force a
+choice with `LLM_PROVIDER=claude` or `LLM_PROVIDER=groq`.
+
+On Groq, only the `openai/gpt-oss-*` models support strict schemas, so
+`GROQ_MODEL` defaults to `openai/gpt-oss-120b`. Note that Groq's free tier
+allows 6,000 tokens per minute and one tailoring call can consume most of
+that — expect roughly one request per minute before hitting a rate limit.
 
 ### Typical workflow
 
