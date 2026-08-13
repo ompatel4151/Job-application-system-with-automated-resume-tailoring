@@ -1,5 +1,11 @@
 # Job Application Tracker with AI Resume Tailoring
 
+**Live demo:** https://job-application-tracker-d3me.onrender.com
+· [API docs](https://job-application-tracker-d3me.onrender.com/docs)
+
+> Hosted on Render's free tier, so the first request after a period of
+> inactivity takes ~30–60s while the instance wakes up.
+
 A full-stack web application for managing a job search end to end: track every
 application through a status pipeline, store structured base resumes, and
 generate a **resume tailored to each specific job description** using the
@@ -108,10 +114,16 @@ mocked, plus the Markdown renderer.
 | `GET` | `/api/applications/{id}/tailored` | List tailored versions |
 | `GET` | `/api/tailored/{id}/markdown` | Download as Markdown |
 
+## Deployment
+
+Deployed on Render with Postgres on Supabase. Step-by-step instructions —
+including the Supabase pooler gotcha — are in [DEPLOY.md](DEPLOY.md).
+
 ## Roadmap
 
 - [ ] PDF export (rendered from the Markdown)
 - [ ] Cover letter generation using the same match analysis
 - [ ] Job description scraping from a URL
 - [ ] Reminders / follow-up nudges for stale applications
-- [ ] Auth + multi-user support and a hosted deployment
+- [ ] Auth + multi-user support
+- [x] Hosted deployment
