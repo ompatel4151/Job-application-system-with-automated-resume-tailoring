@@ -141,7 +141,11 @@ def _tailor_with_groq(base: ResumeContent, user_prompt: str) -> TailoringResult:
     try:
         response = client.chat.completions.create(
             model=settings.groq_model,
-            max_tokens=8000,
+            # Groq counts reserved output tokens against the per-minute rate
+            # limit, so keep this modest — a tailored resume plus analysis fits
+            # in 4k. On the free tier a long job description can still push the
+            # combined request over the limit; that is the documented ceiling.
+            max_tokens=4000,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
