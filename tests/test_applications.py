@@ -30,6 +30,27 @@ def test_created_as_applied_stamps_applied_at(client, make_application):
     assert app_data["applied_at"] is not None
 
 
+def test_skipping_straight_to_interview_stamps_applied_at(client, make_application):
+    """Reaching any applied stage implies the application was submitted."""
+    app_data = make_application()
+    resp = client.patch(
+        f"/api/applications/{app_data['id']}", json={"status": "interview"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["applied_at"] is not None
+
+
+def test_created_at_later_stage_stamps_applied_at(client, make_application):
+    for stage in ("screening", "interview", "offer"):
+        app_data = make_application(status=stage)
+        assert app_data["applied_at"] is not None, stage
+
+
+def test_saved_and_rejected_do_not_stamp_applied_at(client, make_application):
+    assert make_application(status="saved")["applied_at"] is None
+    assert make_application(status="rejected")["applied_at"] is None
+
+
 def test_filter_by_status(client, make_application):
     make_application(company="A")
     make_application(company="B", status="applied")

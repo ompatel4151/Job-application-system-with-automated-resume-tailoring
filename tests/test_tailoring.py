@@ -104,10 +104,10 @@ def test_render_markdown_full_document(sample_resume_content):
 
 
 def test_missing_api_key_raises_friendly_error(monkeypatch, sample_resume_content):
+    from app.config import settings
     from app.services.tailoring import tailor_resume
 
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.setattr(settings, "anthropic_api_key", None)
     with pytest.raises(RuntimeError, match="not configured"):
         tailor_resume(
             resume_content=sample_resume_content,

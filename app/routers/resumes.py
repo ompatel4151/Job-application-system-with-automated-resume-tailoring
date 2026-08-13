@@ -3,14 +3,17 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.database import get_db
+from app.models import utcnow
 from app.schemas import ResumeCreate, ResumeOut, ResumeUpdate
 
 router = APIRouter(prefix="/api/resumes", tags=["resumes"])
 
 
 def _clear_default(db: Session) -> None:
+    # A bulk UPDATE bypasses the ORM's onupdate hook, so bump updated_at by hand
+    # — otherwise a demoted resume keeps a stale timestamp.
     db.query(models.Resume).filter(models.Resume.is_default.is_(True)).update(
-        {"is_default": False}
+        {"is_default": False, "updated_at": utcnow()}, synchronize_session=False
     )
 
 
