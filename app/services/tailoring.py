@@ -10,7 +10,7 @@ keywords, recommendations).
 import anthropic
 from pydantic import BaseModel
 
-from app.config import ANTHROPIC_MODEL
+from app.config import settings
 from app.schemas import MatchAnalysis, ResumeContent
 
 SYSTEM_PROMPT = """\
@@ -42,7 +42,11 @@ def tailor_resume(
     resume_content: dict, job_description: str, company: str, role: str
 ) -> TailoringResult:
     """Call Claude to tailor a resume to a job description."""
-    client = anthropic.Anthropic()
+    if not settings.anthropic_api_key:
+        raise RuntimeError(
+            "Anthropic API key is not configured. Set ANTHROPIC_API_KEY in your .env file."
+        )
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
     base = ResumeContent.model_validate(resume_content)
 
     user_prompt = (
@@ -53,16 +57,12 @@ def tailor_resume(
 
     try:
         response = client.messages.parse(
-            model=ANTHROPIC_MODEL,
+            model=settings.anthropic_model,
             max_tokens=16000,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_prompt}],
             output_format=TailoringResult,
         )
-    except TypeError as exc:  # SDK raises TypeError when no auth method is configured
-        raise RuntimeError(
-            "Anthropic API key is not configured. Set ANTHROPIC_API_KEY in your .env file."
-        ) from exc
     except anthropic.AuthenticationError as exc:
         raise RuntimeError("Anthropic API key was rejected. Check ANTHROPIC_API_KEY.") from exc
     except anthropic.APIConnectionError as exc:

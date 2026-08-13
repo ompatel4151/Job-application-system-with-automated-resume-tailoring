@@ -31,9 +31,12 @@ def tailor_for_application(
         if not resume:
             raise HTTPException(404, "Resume not found")
     else:
+        # Order explicitly so the choice is deterministic if data ever ends up
+        # with more than one default.
         resume = (
             db.query(models.Resume)
             .filter(models.Resume.is_default.is_(True))
+            .order_by(models.Resume.id)
             .first()
         )
         if not resume:

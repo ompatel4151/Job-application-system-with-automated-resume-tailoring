@@ -115,6 +115,14 @@ const toast = msg => {
   setTimeout(() => t.style.display = 'none', 3500);
 };
 const esc = s => (s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// Only ever render http(s) links — a stored "javascript:" or "data:" job URL
+// would otherwise execute when clicked.
+const safeUrl = s => {
+  try {
+    const u = new URL(s, window.location.origin);
+    return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : null;
+  } catch { return null; }
+};
 
 async function loadStats() {
   const s = await api('/api/applications/stats');
@@ -133,7 +141,7 @@ async function loadApps() {
     card.innerHTML = `
       <h3>${esc(a.company)} <span class="badge ${a.status}">${a.status}</span></h3>
       <div class="role">${esc(a.role)}</div>
-      ${a.job_url ? `<a href="${esc(a.job_url)}" target="_blank" style="font-size:.85rem">job posting ↗</a>` : ''}
+      ${safeUrl(a.job_url) ? `<a href="${esc(safeUrl(a.job_url))}" target="_blank" rel="noopener noreferrer" style="font-size:.85rem">job posting ↗</a>` : ''}
       <div class="row">
         <select data-status="${a.id}" style="width:auto">
           ${['saved','applied','screening','interview','offer','rejected'].map(s =>

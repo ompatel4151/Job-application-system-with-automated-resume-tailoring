@@ -1,0 +1,10 @@
+[project]
+name = "job-application-system-with-automated-resume-tailoring"
+version = "0.1.0"
+description = "Track job applications and tailor resumes to each job description with Claude."
+readme = "README.md"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
