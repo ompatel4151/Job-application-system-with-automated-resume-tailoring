@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./job_tracker.db"
 
     # Which LLM backend to tailor with. "auto" picks Claude when an Anthropic
-    # key is present, otherwise Groq — so setting a single key is enough.
+    # key is present, otherwise Groq, so setting a single key is enough.
     llm_provider: Provider = "auto"
 
     anthropic_api_key: str | None = None

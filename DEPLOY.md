@@ -6,7 +6,7 @@ The app runs anywhere that can run a Python web process. These instructions use
 ## 1. Database (Supabase)
 
 1. Create a new project at [supabase.com](https://supabase.com). Save the
-   database password it generates — it is part of the connection string.
+   database password it generates, since it is part of the connection string.
 2. Open **Connect** (top of the project dashboard) → **Session pooler**.
 3. Copy that connection string. It looks like:
 
@@ -16,7 +16,7 @@ The app runs anywhere that can run a Python web process. These instructions use
 
 > **Use the Session pooler, not the direct connection.** The direct connection
 > (`db.<ref>.supabase.co`) is IPv6-only, and Render's free tier has no IPv6
-> egress — it will fail to connect with no useful error.
+> egress, so it fails to connect without giving a useful error.
 
 No SQL to run: the app creates its tables on first startup.
 
@@ -48,7 +48,7 @@ To run tailoring on Groq's free tier instead, set `GROQ_API_KEY`
 `ANTHROPIC_API_KEY`. Either key alone is enough; see the README for the
 rate-limit caveat.
 
-Set these in Render's dashboard only — never commit them. `render.yaml` marks
+Set these in Render's dashboard only, and never commit them. `render.yaml` marks
 both `sync: false` precisely so they are not stored in the repo.
 
 ## 3. Verify
@@ -63,14 +63,15 @@ Expect `{"status":"ok"}`. Then open the root URL for the dashboard and `/docs`
 for the OpenAPI reference.
 
 To confirm the database is actually wired up, add a resume through the
-dashboard and reload the page — if it persists, Postgres is connected. To
-confirm the Claude integration, add an application with a job description and
+dashboard and reload the page. If it persists, Postgres is connected. To
+confirm the model integration, add an application with a job description and
 click **Tailor resume**.
 
 ## Notes
 
 - Render's free tier sleeps after inactivity; the first request afterwards takes
-  ~30–60s while the instance wakes. The startup retry in `app/main.py` covers a
+  about 30 to 60 seconds while the instance wakes. The startup retry in
+  `app/main.py` covers a
   database that is still waking up alongside it.
 - `postgres://` URLs are rewritten to `postgresql://` automatically, so a URL
   copied from a provider that still uses the old scheme works as-is.

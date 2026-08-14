@@ -83,7 +83,7 @@ def test_strict_schema_strips_unsupported_annotations():
 
 
 def test_strict_schema_keeps_a_property_named_title():
-    """Resume entries have a "title" field — it must survive the cleanup."""
+    """Resume entries have a "title" field, which must survive the cleanup."""
     entry = strict_json_schema(TailoringResult)["$defs"]["ExperienceEntry"]
     assert "title" in entry["properties"]
     assert entry["properties"]["title"] == {"type": "string"}

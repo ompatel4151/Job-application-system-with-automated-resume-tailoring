@@ -11,8 +11,8 @@ router = APIRouter(prefix="/api/resumes", tags=["resumes"])
 
 
 def _clear_default(db: Session) -> None:
-    # A bulk UPDATE bypasses the ORM's onupdate hook, so bump updated_at by hand
-    # — otherwise a demoted resume keeps a stale timestamp.
+    # A bulk UPDATE bypasses the ORM's onupdate hook, so bump updated_at by hand.
+    # Without this, a demoted resume keeps a stale timestamp.
     db.query(models.Resume).filter(models.Resume.is_default.is_(True)).update(
         {"is_default": False, "updated_at": utcnow()}, synchronize_session=False
     )
