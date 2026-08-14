@@ -15,7 +15,7 @@ from app.schemas import (
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
 # Every stage that implies the application has actually been submitted. Reaching
-# any of these for the first time is what stamps applied_at — moving straight to
+# any of these for the first time is what stamps applied_at; moving straight to
 # "interview" still means you applied.
 APPLIED_STAGES = frozenset(
     {

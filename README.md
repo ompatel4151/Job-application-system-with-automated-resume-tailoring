@@ -4,37 +4,37 @@
 · [API docs](https://job-application-tracker-d3me.onrender.com/docs)
 
 > Hosted on Render's free tier, so the first request after a period of
-> inactivity takes ~30–60s while the instance wakes up.
+> inactivity takes about 30 to 60 seconds while the instance wakes up.
 
 A full-stack web application for managing a job search end to end: track every
 application through a status pipeline, store structured base resumes, and
-generate a **resume tailored to each specific job description** using the
-Claude API — complete with a match score, matched/missing keywords, and
-concrete recommendations.
+generate a **resume tailored to each specific job description** with an LLM,
+returning a match score, matched and missing keywords, and concrete
+recommendations.
 
 ## Features
 
-- **Application pipeline** — track applications through
+- **Application pipeline.** Track applications through
   `saved → applied → screening → interview → offer / rejected`, with automatic
   timestamping of when you applied and live pipeline statistics.
-- **Structured resumes** — resumes are stored as structured JSON (summary,
-  skills, experience, projects, education), not opaque text, so they can be
-  programmatically rewritten and rendered.
-- **Resume upload** — drop in a PDF, JPEG, PNG or WebP and it's parsed into
+- **Structured resumes.** Resumes are stored as structured JSON (summary,
+  skills, experience, projects, education) rather than opaque text, so they can
+  be programmatically rewritten and rendered.
+- **Resume upload.** Drop in a PDF, JPEG, PNG, or WebP and it gets parsed into
   that structure for review before saving. Text PDFs are read locally with
   pypdf so no vision tokens are spent; scans and photos fall back to a
   multimodal model.
-- **AI resume tailoring** — one click sends your base resume plus the job
-  description to Claude, which rewrites bullet points to mirror the job's
-  vocabulary, reorders skills by relevance, and trims irrelevant content —
+- **AI resume tailoring.** One click sends your base resume plus the job
+  description to the model, which rewrites bullet points to mirror the job's
+  vocabulary, reorders skills by relevance, and trims irrelevant content, all
   under a strict "never invent experience" system prompt. Structured outputs
   guarantee the response always matches the resume schema.
-- **Match analysis** — every tailored resume comes with a 0–100 fit score,
-  the keywords you match, the requirements you're missing, and actionable
+- **Match analysis.** Every tailored resume comes with a 0 to 100 fit score,
+  the keywords you match, the requirements you're missing, and specific
   recommendations (what to learn, what to address in a cover letter).
-- **Markdown export** — download any tailored resume as a clean Markdown
-  document, ready to convert to PDF.
-- **Web dashboard** — a zero-build, single-page dashboard served by the API,
+- **Markdown export.** Download any tailored resume as a Markdown document,
+  ready to convert to PDF.
+- **Web dashboard.** A zero-build single-page dashboard served by the API,
   plus interactive OpenAPI docs at `/docs`.
 
 ## Architecture
@@ -51,26 +51,27 @@ app/
 │   ├── resumes.py       # base resume CRUD, single-default enforcement
 │   └── tailoring.py     # tailoring endpoints + markdown export
 ├── services/
-│   └── tailoring.py     # Claude API integration (structured outputs)
+│   ├── tailoring.py     # LLM tailoring (Claude / Groq, structured outputs)
+│   └── extraction.py    # parse uploaded PDFs and images into resume content
 └── static/index.html    # dashboard UI (vanilla JS, no build step)
-tests/                   # pytest suite (API + service layer, Claude mocked)
+tests/                   # pytest suite (API + service layer, model mocked)
 ```
 
-**Stack:** Python 3.11 · FastAPI · SQLAlchemy 2.0 · Pydantic v2 · SQLite ·
-Anthropic SDK (Claude) · pytest
+**Stack:** Python 3.11 · FastAPI · SQLAlchemy 2.0 · Pydantic v2 · SQLite or
+Postgres · Anthropic and OpenAI SDKs · pypdf · pytest
 
 Key design decisions:
 
-- **Structured outputs, not prompt-and-pray.** The tailoring call uses the
-  Anthropic SDK's `messages.parse()` with a Pydantic schema, so the model's
-  response is validated against the exact resume shape — no fragile JSON
-  parsing of free text.
-- **The LLM layer is isolated.** All Claude interaction lives in one service
+- **Structured outputs, not prompt-and-pray.** The tailoring call validates the
+  model's response against a Pydantic schema, so it always matches the exact
+  resume shape instead of parsing free text by hand. On Claude this uses the
+  Anthropic SDK's `messages.parse()`; on Groq it uses a strict JSON schema.
+- **The LLM layer is isolated.** All model interaction lives in one service
   module behind a plain function, so the API layer is fully testable with the
-  model mocked, and the provider/model can be swapped in one place.
+  model mocked, and the provider can be swapped in one place.
 - **Honesty guardrails in the prompt.** The system prompt forbids inventing
-  employers, titles, dates, or metrics — tailoring means rephrasing and
-  reordering, never fabricating.
+  employers, titles, dates, or metrics. Tailoring means rephrasing and
+  reordering, not fabricating.
 
 ## Getting started
 
@@ -80,7 +81,7 @@ cd Job-application-system-with-automated-resume-tailoring
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-cp .env.example .env      # add an API key — see "Tailoring backend" below
+cp .env.example .env      # add an API key (see "Tailoring backend" below)
 
 uvicorn app.main:app --reload
 ```
@@ -103,21 +104,22 @@ Set one key and it is used automatically; set both and Claude wins. Force a
 choice with `LLM_PROVIDER=claude` or `LLM_PROVIDER=groq`.
 
 On Groq, only the `openai/gpt-oss-*` models support strict schemas, so
-`GROQ_MODEL` defaults to `openai/gpt-oss-120b`. Note that Groq's free tier
-allows 6,000 tokens per minute and one tailoring call can consume most of
-that — expect roughly one request per minute before hitting a rate limit.
+`GROQ_MODEL` defaults to `openai/gpt-oss-120b`. One thing to watch: Groq's free
+tier has a small per-minute token budget, and a single tailoring call can use
+most of it, so on the free tier expect roughly one request per minute before
+hitting a rate limit.
 
 Uploading a resume image needs vision, which `gpt-oss` does not have, so that
 path uses `GROQ_VISION_MODEL` (default `qwen/qwen3.6-27b`) with best-effort
-JSON validated against the schema. Claude reads PDFs and images natively, so
-it is the better choice for scanned resumes — Groq cannot read a PDF that has
+JSON validated against the schema. Claude reads PDFs and images natively, so it
+is the better choice for scanned resumes, since Groq cannot read a PDF that has
 no text layer.
 
 ### Typical workflow
 
 1. Add your base resume (structured JSON) and mark it default.
 2. Add an application with the job description pasted in.
-3. Click **Tailor resume** — review the match score and tailored bullets.
+3. Click **Tailor resume** and review the match score and tailored bullets.
 4. Download the Markdown, update the application status as you progress.
 
 ## Running tests
@@ -127,8 +129,8 @@ pytest
 ```
 
 The suite covers the application pipeline, resume management (including
-single-default enforcement), and the tailoring flow with the Claude call
-mocked, plus the Markdown renderer.
+single-default enforcement), the upload and tailoring flows with the model
+call mocked, and the Markdown renderer.
 
 ## API overview
 
@@ -138,6 +140,7 @@ mocked, plus the Markdown renderer.
 | `GET/PATCH/DELETE` | `/api/applications/{id}` | Read / update / delete |
 | `GET` | `/api/applications/stats` | Pipeline counts |
 | `GET/POST` | `/api/resumes` | List / create base resumes |
+| `POST` | `/api/resumes/parse` | Parse an uploaded PDF or image into resume content |
 | `GET/PUT/DELETE` | `/api/resumes/{id}` | Read / update / delete |
 | `POST` | `/api/applications/{id}/tailor` | Generate a tailored resume |
 | `GET` | `/api/applications/{id}/tailored` | List tailored versions |
@@ -145,8 +148,8 @@ mocked, plus the Markdown renderer.
 
 ## Deployment
 
-Deployed on Render with Postgres on Supabase. Step-by-step instructions —
-including the Supabase pooler gotcha — are in [DEPLOY.md](DEPLOY.md).
+Deployed on Render with Postgres on Supabase. Step-by-step instructions,
+including the Supabase pooler gotcha, are in [DEPLOY.md](DEPLOY.md).
 
 ## Roadmap
 
@@ -156,3 +159,4 @@ including the Supabase pooler gotcha — are in [DEPLOY.md](DEPLOY.md).
 - [ ] Reminders / follow-up nudges for stale applications
 - [ ] Auth + multi-user support
 - [x] Hosted deployment
+</content>

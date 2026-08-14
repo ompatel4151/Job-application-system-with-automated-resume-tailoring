@@ -1,8 +1,8 @@
 """Parse an uploaded resume file into structured resume content.
 
 Users arrive with a PDF or a photo of their resume, not JSON. This turns
-either into a :class:`ResumeContent` so the rest of the app — tailoring,
-export, matching — can treat an upload exactly like a hand-entered resume.
+either into a :class:`ResumeContent` so the rest of the app (tailoring,
+export, matching) can treat an upload exactly like a hand-entered resume.
 
 Two routes in, picked per file:
 
@@ -13,7 +13,7 @@ Two routes in, picked per file:
   a picture of a page) need vision: Claude reads the file natively, Groq uses
   its multimodal model.
 
-Nothing is invented here either — the prompt only restructures what is on the
+Nothing is invented here either: the prompt only restructures what is on the
 page, and leaves fields empty when the resume does not have them.
 """
 
@@ -85,7 +85,7 @@ def pdf_text(data: bytes) -> str:
         reader = PdfReader(io.BytesIO(data))
         pages = [page.extract_text() or "" for page in reader.pages]
     except Exception:
-        # A malformed or encrypted PDF is not fatal — fall back to vision.
+        # A malformed or encrypted PDF is not fatal; fall back to vision.
         return ""
     return "\n\n".join(pages).strip()
 

@@ -2,8 +2,8 @@
 
 Given a base resume (structured JSON) and a job description, ask a model to
 rewrite the resume so it foregrounds the most relevant experience, skills, and
-keywords for that specific job — without inventing anything the candidate
-didn't do — and to return a match analysis (fit score, matched/missing
+keywords for that specific job, without inventing anything the candidate
+didn't do, and to return a match analysis (fit score, matched/missing
 keywords, recommendations).
 
 Two backends are supported behind one interface, both using schema-constrained
@@ -65,7 +65,7 @@ def strict_json_schema(model: type[BaseModel]) -> dict[str, Any]:
     def clean(node: Any) -> None:
         """Normalize one schema node.
 
-        Only annotations on the node itself are stripped — property *names* are
+        Only annotations on the node itself are stripped; property *names* are
         left alone, since a resume entry legitimately has a field called
         "title".
         """
@@ -142,7 +142,7 @@ def _tailor_with_groq(base: ResumeContent, user_prompt: str) -> TailoringResult:
         response = client.chat.completions.create(
             model=settings.groq_model,
             # Groq counts reserved output tokens against the per-minute rate
-            # limit, so keep this modest — a tailored resume plus analysis fits
+            # limit, so keep this modest; a tailored resume plus analysis fits
             # in 4k. On the free tier a long job description can still push the
             # combined request over the limit; that is the documented ceiling.
             max_tokens=4000,
@@ -163,7 +163,7 @@ def _tailor_with_groq(base: ResumeContent, user_prompt: str) -> TailoringResult:
         raise RuntimeError("Groq API key was rejected. Check GROQ_API_KEY.") from exc
     except openai.RateLimitError as exc:
         # Groq's free tier allows only 6k tokens/minute, which one tailoring
-        # call can exhaust on its own — worth naming explicitly.
+        # call can exhaust on its own, worth naming explicitly.
         raise RuntimeError(
             "Groq rate limit reached. The free tier allows 6,000 tokens/minute; "
             "wait a minute or raise your tier."
@@ -201,7 +201,7 @@ def tailor_resume(
     else:
         result = _tailor_with_claude(base, user_prompt)
 
-    # Contact details are facts, not tailoring targets — always carry them over.
+    # Contact details are facts, not tailoring targets, so always carry them over.
     result.tailored_resume.full_name = base.full_name
     result.tailored_resume.contact = base.contact
     return result
