@@ -104,10 +104,10 @@ Set one key and it is used automatically; set both and Claude wins. Force a
 choice with `LLM_PROVIDER=claude` or `LLM_PROVIDER=groq`.
 
 On Groq, only the `openai/gpt-oss-*` models support strict schemas, so
-`GROQ_MODEL` defaults to `openai/gpt-oss-120b`. One thing to watch: Groq's free
-tier has a small per-minute token budget, and a single tailoring call can use
-most of it, so on the free tier expect roughly one request per minute before
-hitting a rate limit.
+`GROQ_MODEL` defaults to `openai/gpt-oss-120b`. Groq's free tier also has a
+small per-minute token budget, and a single tailoring call can use most of it,
+so on the free tier expect roughly one request per minute before hitting a
+rate limit.
 
 Uploading a resume image needs vision, which `gpt-oss` does not have, so that
 path uses `GROQ_VISION_MODEL` (default `qwen/qwen3.6-27b`) with best-effort
@@ -159,4 +159,3 @@ including the Supabase pooler gotcha, are in [DEPLOY.md](DEPLOY.md).
 - [ ] Reminders / follow-up nudges for stale applications
 - [ ] Auth + multi-user support
 - [x] Hosted deployment
-</content>
