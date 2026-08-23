@@ -42,6 +42,17 @@
   .upload input[type=file] { display: none; }
   .upload-status { font-family: sans-serif; font-size: .8rem; margin-top: .6rem; color: var(--muted); }
   .upload-status.error { color: #a33; }
+  .review { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: .9rem 1rem; }
+  .review h3 { font-size: 1.05rem; margin-bottom: .1rem; }
+  .review .contact { color: var(--muted); font-size: .85rem; font-family: sans-serif; margin-bottom: .5rem; }
+  .review .rsum { font-size: .9rem; margin-bottom: .4rem; }
+  .review .rlabel { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-family: sans-serif; margin: .55rem 0 .25rem; }
+  .review .chips { display: flex; flex-wrap: wrap; gap: .3rem; }
+  .review .chip { font-family: sans-serif; font-size: .78rem; background: var(--card); border: 1px solid var(--border); border-radius: 99px; padding: .1rem .55rem; }
+  .review ul { margin: 0 0 0 1.1rem; font-size: .88rem; }
+  .review .hint { color: var(--muted); font-size: .78rem; font-family: sans-serif; margin-top: .7rem; }
+  details.advanced summary { cursor: pointer; font-family: sans-serif; font-size: .82rem; color: var(--accent); }
+  details.advanced[open] summary { margin-bottom: .3rem; }
   dialog { border: 1px solid var(--border); border-radius: var(--radius); max-width: 760px; width: 90vw; max-height: 85vh; padding: 1.2rem; }
   dialog::backdrop { background: rgba(0,0,0,.35); }
   pre.md { white-space: pre-wrap; font-size: .85rem; background: var(--bg); padding: 1rem; border-radius: 6px; max-height: 45vh; overflow: auto; }
@@ -70,7 +81,7 @@
         </select>
       </div>
       <div><label>Job URL</label><input name="job_url" placeholder="https://..."></div>
-      <div class="full"><label>Job description (paste it here — used for tailoring)</label>
+      <div class="full"><label>Job description (paste it here; used for tailoring)</label>
         <textarea name="job_description" rows="4"></textarea></div>
       <div class="full"><button type="submit">Add application</button></div>
     </form>
@@ -91,27 +102,30 @@
   <section>
     <h2>Base resumes</h2>
     <p style="margin-bottom:.6rem; color:var(--muted); font-size:.9rem">
-      Upload a PDF or photo of your resume and it will be read into the form below,
-      or paste it as JSON (see <code>/docs</code> for the schema).
-      The default resume is used for tailoring.
+      Upload a PDF or photo of your resume. You'll see the parsed result to
+      confirm before saving. The default resume is the one used for tailoring.
     </p>
 
     <div class="upload" id="dropzone">
       <label for="resume-file" class="upload-label">
         <strong>Upload a resume</strong>
-        <span>Drag a file here, or <u>choose one</u> — PDF, JPEG, PNG or WebP, up to 10MB</span>
+        <span>Drag a file here, or <u>choose one</u>. PDF, JPEG, PNG, or WebP, up to 10MB.</span>
       </label>
       <input type="file" id="resume-file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp">
       <p class="upload-status" id="upload-status" hidden></p>
     </div>
 
     <form class="grid" id="resume-form">
-      <div><label>Name</label><input name="name" required placeholder="e.g. Software Engineer base"></div>
-      <div><label>Default?</label>
+      <div class="full review" id="resume-review" hidden></div>
+      <div><label>Resume name</label><input name="name" required placeholder="e.g. Software Engineer base"></div>
+      <div><label>Use as default?</label>
         <select name="is_default"><option value="true">yes</option><option value="false">no</option></select>
       </div>
-      <div class="full"><label>Resume content (JSON)</label>
-        <textarea name="content" rows="6" placeholder='{"full_name": "...", "contact": "...", "summary": "...", "skills": [], "experience": [], "projects": [], "education": []}'></textarea></div>
+      <details class="full advanced" id="json-advanced">
+        <summary>Edit as JSON (advanced)</summary>
+        <label style="margin-top:.6rem">Resume content (JSON)</label>
+        <textarea name="content" rows="8" placeholder='{"full_name": "...", "contact": "...", "summary": "...", "skills": [], "experience": [], "projects": [], "education": []}'></textarea>
+      </details>
       <div class="full"><button type="submit">Save resume</button></div>
     </form>
     <div class="cards" id="resumes" style="margin-top:1rem"></div>
@@ -136,7 +150,7 @@ const toast = msg => {
   setTimeout(() => t.style.display = 'none', 3500);
 };
 const esc = s => (s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-// Only ever render http(s) links — a stored "javascript:" or "data:" job URL
+// Only ever render http(s) links. A stored "javascript:" or "data:" job URL
 // would otherwise execute when clicked.
 const safeUrl = s => {
   try {
@@ -179,7 +193,7 @@ async function loadApps() {
 async function loadResumes() {
   const resumes = await api('/api/resumes');
   const el = document.getElementById('resumes');
-  el.innerHTML = resumes.length ? '' : '<p class="empty">No resumes yet — add your base resume above.</p>';
+  el.innerHTML = resumes.length ? '' : '<p class="empty">No resumes yet. Add your base resume above.</p>';
   for (const r of resumes) {
     const card = document.createElement('div');
     card.className = 'card';
@@ -233,7 +247,7 @@ const setStatus = (msg, isError) => {
 async function uploadResume(file) {
   if (!file) return;
   if (file.size > MAX_UPLOAD_BYTES) {
-    setStatus(`${file.name} is ${(file.size / 1e6).toFixed(1)}MB — the limit is 10MB.`, true);
+    setStatus(`${file.name} is ${(file.size / 1e6).toFixed(1)}MB, over the 10MB limit.`, true);
     return;
   }
   dropzone.classList.add('busy');
@@ -248,8 +262,9 @@ async function uploadResume(file) {
       // Seed the name from the filename so saving is one click away.
       form.name.value = file.name.replace(/\.[^.]+$/, '');
     }
-    setStatus('Read it — check the fields below, then save.');
-    form.content.scrollIntoView({behavior: 'smooth', block: 'center'});
+    renderReview();
+    setStatus('Read your resume. Check the summary below, then save.');
+    reviewEl.scrollIntoView({behavior: 'smooth', block: 'center'});
   } catch (err) {
     setStatus(err.message, true);
   } finally {
@@ -265,14 +280,63 @@ fileInput.addEventListener('change', e => uploadResume(e.target.files[0]));
   dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('dragover'); }));
 dropzone.addEventListener('drop', e => uploadResume(e.dataTransfer.files[0]));
 
+// ---- Readable review of the parsed resume (the JSON is the source of truth) ----
+const reviewEl = document.getElementById('resume-review');
+const jsonAdvanced = document.getElementById('json-advanced');
+
+function resumeHasContent(c) {
+  return !!(c && (c.full_name || (c.skills || []).length ||
+    (c.experience || []).length || (c.projects || []).length ||
+    (c.education || []).length || c.summary));
+}
+
+function renderReview() {
+  let c;
+  try { c = JSON.parse(document.getElementById('resume-form').content.value || '{}'); }
+  catch { reviewEl.hidden = true; return; }
+  if (!resumeHasContent(c)) { reviewEl.hidden = true; reviewEl.innerHTML = ''; return; }
+
+  const sec = (label, html) => html ? `<p class="rlabel">${label}</p>${html}` : '';
+  const skills = (c.skills || []).length
+    ? `<div class="chips">${c.skills.map(s => `<span class="chip">${esc(s)}</span>`).join('')}</div>` : '';
+  const listOf = (rows) => rows.filter(Boolean).length ? `<ul>${rows.join('')}</ul>` : '';
+  const exp = listOf((c.experience || []).map(e =>
+    `<li>${esc(e.title || '')}${e.company ? `, ${esc(e.company)}` : ''}${e.dates ? ` (${esc(e.dates)})` : ''}</li>`));
+  const proj = listOf((c.projects || []).map(p => `<li>${esc(p.name || '')}</li>`));
+  const edu = listOf((c.education || []).map(e =>
+    `<li>${esc(e.degree || '')}${e.school ? `${e.degree ? ', ' : ''}${esc(e.school)}` : ''}${e.dates ? ` (${esc(e.dates)})` : ''}</li>`));
+
+  reviewEl.innerHTML = `
+    <h3>${esc(c.full_name || 'Untitled resume')}</h3>
+    ${c.contact ? `<div class="contact">${esc(c.contact)}</div>` : ''}
+    ${c.summary ? `<div class="rsum">${esc(c.summary)}</div>` : ''}
+    ${sec('Skills', skills)}
+    ${sec('Experience', exp)}
+    ${sec('Projects', proj)}
+    ${sec('Education', edu)}
+    <p class="hint">This is what will be saved. If something looks wrong, open "Edit as JSON (advanced)" to fix it, then save.</p>`;
+  reviewEl.hidden = false;
+}
+
+// Keep the review in sync when someone edits the raw JSON directly.
+document.getElementById('resume-form').content.addEventListener('input', renderReview);
+
 document.getElementById('resume-form').addEventListener('submit', async e => {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(e.target));
+  let content;
+  try { content = JSON.parse(data.content || '{}'); }
+  catch { return toast('The resume JSON is invalid. Fix it under "Edit as JSON (advanced)".'); }
+  if (!resumeHasContent(content)) {
+    return toast('Upload a resume first, or add content under "Edit as JSON (advanced)".');
+  }
   try {
-    const content = JSON.parse(data.content || '{}');
     await api('/api/resumes', {method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({name: data.name, is_default: data.is_default === 'true', content})});
-    e.target.reset(); loadResumes();
+    e.target.reset();
+    reviewEl.hidden = true; reviewEl.innerHTML = '';
+    jsonAdvanced.open = false;
+    loadResumes();
   } catch (err) { toast(err.message); }
 });
 
