@@ -1,0 +1,94 @@
+name: Deploy
+
+# Builds both images and deploys them to Cloud Run on merge to main.
+# Requires the repository variables and secrets listed in TEARDOWN.md /
+# DEPLOY.md. Auth is keyless via Workload Identity Federation.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGION: us-central1
+  AR_REPO: job-tracker
+  BACKEND_SERVICE: job-tracker-backend
+  FRONTEND_SERVICE: job-tracker-frontend
+
+permissions:
+  contents: read
+  id-token: write # required for Workload Identity Federation
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Compute image references
+        id: img
+        run: |
+          BASE="${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.AR_REPO }}"
+          echo "backend=$BASE/backend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "frontend=$BASE/frontend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push backend image
+        run: |
+          docker build -t "${{ steps.img.outputs.backend }}" ./backend
+          docker push "${{ steps.img.outputs.backend }}"
+
+      - name: Deploy backend
+        run: |
+          gcloud run deploy ${{ env.BACKEND_SERVICE }} \
+            --image "${{ steps.img.outputs.backend }}" \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --quiet \
+            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }},API_KEY=${{ secrets.API_KEY }},GROQ_API_KEY=${{ secrets.GROQ_API_KEY }},ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }},LLM_PROVIDER=${{ vars.LLM_PROVIDER }}"
+
+      - name: Read backend URL
+        id: beurl
+        run: |
+          URL=$(gcloud run services describe ${{ env.BACKEND_SERVICE }} \
+            --region ${{ env.REGION }} --format='value(status.url)')
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push frontend image
+        run: |
+          docker build -t "${{ steps.img.outputs.frontend }}" ./frontend
+          docker push "${{ steps.img.outputs.frontend }}"
+
+      - name: Deploy frontend
+        run: |
+          gcloud run deploy ${{ env.FRONTEND_SERVICE }} \
+            --image "${{ steps.img.outputs.frontend }}" \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --quiet \
+            --set-env-vars "BACKEND_URL=${{ steps.beurl.outputs.url }},BACKEND_API_KEY=${{ secrets.API_KEY }}"
+
+      - name: Summary
+        run: |
+          FE=$(gcloud run services describe ${{ env.FRONTEND_SERVICE }} \
+            --region ${{ env.REGION }} --format='value(status.url)')
+          {
+            echo "### Deployed"
+            echo "- Frontend: $FE"
+            echo "- Backend:  ${{ steps.beurl.outputs.url }}"
+          } >> "$GITHUB_STEP_SUMMARY"
