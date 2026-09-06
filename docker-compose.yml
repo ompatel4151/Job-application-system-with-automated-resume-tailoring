@@ -1,0 +1,50 @@
+# Local full-stack dev: Postgres + backend + frontend, mirroring the container
+# images used in the cloud. Bring it up with `docker compose up --build`.
+#
+# Optional secrets are read from the host environment (or a .env file next to
+# this one): GROQ_API_KEY or ANTHROPIC_API_KEY enable tailoring; API_KEY gates
+# the backend and is forwarded by the frontend proxy.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: jobtracker
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d jobtracker"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://app:app@db:5432/jobtracker
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-auto}
+      API_KEY: ${API_KEY:-}
+    ports:
+      - "8000:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    environment:
+      BACKEND_URL: http://backend:8080
+      BACKEND_API_KEY: ${API_KEY:-}
+    ports:
+      - "3000:8080"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
