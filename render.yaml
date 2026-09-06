@@ -4,17 +4,20 @@ services:
     runtime: python
     plan: free
     region: oregon
+    # Backend now lives under backend/; build and run relative to it.
+    rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.9"
-      # Set both of these in the Render dashboard — never commit them.
-      # DATABASE_URL: Supabase → Connect → Session pooler connection string.
-      # (Do not use the direct connection: it is IPv6-only and Render's free
-      # tier cannot reach it.)
+      # Set secrets in the Render dashboard, never in this file.
+      # DATABASE_URL: Supabase, Connect, Session pooler connection string.
+      # (Not the direct connection: it is IPv6-only and Render's free tier
+      # cannot reach it.)
       - key: DATABASE_URL
         sync: false
+      # One LLM key is enough. GROQ_API_KEY works too (free tier).
       - key: ANTHROPIC_API_KEY
         sync: false
