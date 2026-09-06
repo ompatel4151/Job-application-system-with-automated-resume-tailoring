@@ -39,26 +39,38 @@ recommendations.
 
 ## Architecture
 
+Two services in one repo. The browser talks only to the Next.js frontend, which
+proxies API calls server-side to the FastAPI backend (attaching the API key), so
+the key never reaches the browser and there is no CORS to manage.
+
 ```
-app/
-├── main.py              # FastAPI app, router wiring, static dashboard
-├── config.py            # environment-based settings
-├── database.py          # SQLAlchemy engine / session management
-├── models.py            # ORM models: Resume, Application, TailoredResume
-├── schemas.py           # Pydantic request/response schemas
-├── routers/
-│   ├── applications.py  # CRUD + status pipeline + stats
-│   ├── resumes.py       # base resume CRUD, single-default enforcement
-│   └── tailoring.py     # tailoring endpoints + markdown export
-├── services/
-│   ├── tailoring.py     # LLM tailoring (Claude / Groq, structured outputs)
-│   └── extraction.py    # parse uploaded PDFs and images into resume content
-└── static/index.html    # dashboard UI (vanilla JS, no build step)
-tests/                   # pytest suite (API + service layer, model mocked)
+backend/                 # FastAPI service
+├── app/
+│   ├── main.py          # app, router wiring, CORS, API-key gate
+│   ├── config.py        # environment-based settings
+│   ├── database.py      # SQLAlchemy engine / session
+│   ├── models.py        # ORM: Resume, Application, TailoredResume
+│   ├── schemas.py       # Pydantic request/response schemas
+│   ├── routers/         # applications, resumes, tailoring
+│   ├── services/        # tailoring + upload extraction (Claude / Groq)
+│   └── static/          # legacy vanilla-JS dashboard (still served at /)
+├── tests/               # pytest suite (API + service layer, model mocked)
+└── Dockerfile
+frontend/                # Next.js App Router (TypeScript, Tailwind, shadcn/ui)
+├── src/app/             # board, application detail, tailor, base-resume pages
+│   └── api/[...path]/   # server-side proxy to the backend
+├── src/lib/api/         # OpenAPI-generated types, typed client, Query hooks
+├── e2e/                 # Playwright smoke test
+└── Dockerfile
+docker-compose.yml       # db + backend + frontend for local dev
+.github/workflows/       # CI (tests) and Deploy (Cloud Run)
 ```
 
-**Stack:** Python 3.11 · FastAPI · SQLAlchemy 2.0 · Pydantic v2 · SQLite or
+**Backend:** Python 3.11 · FastAPI · SQLAlchemy 2.0 · Pydantic v2 · SQLite or
 Postgres · Anthropic and OpenAI SDKs · pypdf · pytest
+**Frontend:** Next.js · React · TypeScript · Tailwind · TanStack Query ·
+Vitest · Playwright
+**Infra:** Docker · GitHub Actions · Cloud Run · Supabase Postgres
 
 Key design decisions:
 
@@ -75,19 +87,40 @@ Key design decisions:
 
 ## Getting started
 
+The fastest path runs the whole stack (Postgres, backend, frontend) in
+containers:
+
 ```bash
-git clone <this repo>
-cd Job-application-system-with-automated-resume-tailoring
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-
-cp .env.example .env      # add an API key (see "Tailoring backend" below)
-
-uvicorn app.main:app --reload
+docker compose up --build
 ```
 
-Open <http://localhost:8000> for the dashboard, or
-<http://localhost:8000/docs> for the interactive API docs.
+Then open <http://localhost:3000> for the app. Tailoring needs an LLM key; set
+`GROQ_API_KEY` (free) in your shell or a `.env` file before bringing it up. To
+require a key on the API, set `API_KEY` too and it is applied to both services.
+
+### Running the services directly
+
+Backend:
+
+```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env      # add an API key (see "Tailoring backend" below)
+uvicorn app.main:app --reload --port 8000
+```
+
+Frontend (in another terminal):
+
+```bash
+cd frontend
+npm install
+cp .env.example .env.local   # BACKEND_URL defaults to http://localhost:8000
+npm run dev
+```
+
+Open <http://localhost:3000> for the app, or <http://localhost:8000/docs> for
+the interactive API docs. Use `localhost`, not `127.0.0.1`, in dev.
 
 ### Tailoring backend
 
@@ -124,13 +157,26 @@ no text layer.
 
 ## Running tests
 
+Backend:
+
 ```bash
-pytest
+cd backend && pytest
 ```
 
-The suite covers the application pipeline, resume management (including
-single-default enforcement), the upload and tailoring flows with the model
-call mocked, and the Markdown renderer.
+Frontend:
+
+```bash
+cd frontend
+npm run lint
+npm test          # Vitest unit tests
+npm run test:e2e  # Playwright smoke test
+```
+
+The backend suite covers the application pipeline, resume management (including
+single-default enforcement), the upload and tailoring flows with the model call
+mocked, the API-key gate, and the Markdown renderer. The frontend tests cover
+the status config, the API client, and the board rendering. CI runs all of
+these on every pull request.
 
 ## API overview
 
@@ -148,8 +194,24 @@ call mocked, and the Markdown renderer.
 
 ## Deployment
 
-Deployed on Render with Postgres on Supabase. Step-by-step instructions,
-including the Supabase pooler gotcha, are in [DEPLOY.md](DEPLOY.md).
+Both services deploy to **Google Cloud Run** (scale-to-zero) with Postgres on
+Supabase, built and shipped by GitHub Actions:
+
+- **CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs backend
+  and frontend tests on every pull request.
+- **Deploy** ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) on
+  merge to `main` builds both images, pushes them to Artifact Registry, and
+  deploys to Cloud Run, authenticating with keyless Workload Identity
+  Federation (no service-account keys stored anywhere).
+
+One-time GCP setup is scripted in
+[`scripts/gcp-setup.sh`](scripts/gcp-setup.sh); it creates the registry, deploy
+identity, and repo trust, then prints the GitHub variables and secrets to set.
+[TEARDOWN.md](TEARDOWN.md) has exact commands to destroy everything, plus cost
+notes (roughly $0 at rest).
+
+The earlier single-service Render deployment is still described in
+[DEPLOY.md](DEPLOY.md).
 
 ## Roadmap
 
