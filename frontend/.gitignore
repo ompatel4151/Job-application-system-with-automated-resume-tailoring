@@ -42,3 +42,10 @@ next-env.d.ts
 
 # Keep the committed template
 !.env.example
+
+# testing
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/coverage
