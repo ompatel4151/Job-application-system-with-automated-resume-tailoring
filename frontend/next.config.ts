@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Allow the dev server to be reached over 127.0.0.1 as well as localhost,
+  // which some tooling (Playwright, the preview browser) uses. Dev-only.
+  allowedDevOrigins: ["127.0.0.1"],
 };
 
 export default nextConfig;
