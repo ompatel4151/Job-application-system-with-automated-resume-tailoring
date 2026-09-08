@@ -1,23 +1,47 @@
+# Render Blueprint: two Docker web services (backend + frontend) on the free
+# plan, built from their Dockerfiles. Create it in the dashboard with
+# New > Blueprint, pointed at this repo. Secrets (sync: false) are entered
+# there, never committed.
+#
+# Database stays on Supabase; set DATABASE_URL to the Session pooler string.
+
 services:
   - type: web
-    name: job-application-tracker
-    runtime: python
+    name: job-tracker-backend
+    runtime: docker
     plan: free
     region: oregon
-    # Backend now lives under backend/; build and run relative to it.
-    rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     healthCheckPath: /health
     envVars:
-      - key: PYTHON_VERSION
-        value: "3.11.9"
-      # Set secrets in the Render dashboard, never in this file.
-      # DATABASE_URL: Supabase, Connect, Session pooler connection string.
-      # (Not the direct connection: it is IPv6-only and Render's free tier
-      # cannot reach it.)
       - key: DATABASE_URL
         sync: false
-      # One LLM key is enough. GROQ_API_KEY works too (free tier).
+      # A long random string; the frontend must send the same value.
+      - key: API_KEY
+        sync: false
+      # One LLM key is enough (Groq is free). Leave the other unset.
+      - key: GROQ_API_KEY
+        sync: false
       - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: LLM_PROVIDER
+        value: auto
+
+  - type: web
+    name: job-tracker-frontend
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    envVars:
+      # Render injects the backend's hostname here; the proxy adds https://.
+      - key: BACKEND_URL
+        fromService:
+          type: web
+          name: job-tracker-backend
+          property: host
+      # Must match the backend's API_KEY above.
+      - key: BACKEND_API_KEY
         sync: false
