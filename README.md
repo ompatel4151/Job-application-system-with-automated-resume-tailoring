@@ -194,24 +194,20 @@ these on every pull request.
 
 ## Deployment
 
-Both services deploy to **Google Cloud Run** (scale-to-zero) with Postgres on
-Supabase, built and shipped by GitHub Actions:
+Both services run as **Docker containers on Render** (free plan) with Postgres
+on Supabase:
 
 - **CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs backend
   and frontend tests on every pull request.
-- **Deploy** ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) on
-  merge to `main` builds both images, pushes them to Artifact Registry, and
-  deploys to Cloud Run, authenticating with keyless Workload Identity
-  Federation (no service-account keys stored anywhere).
+- **Deploy** is Render's native Docker pipeline: the Blueprint in
+  [`render.yaml`](render.yaml) defines both services, and Render rebuilds and
+  redeploys them from their Dockerfiles on every push to `main`.
 
-One-time GCP setup is scripted in
-[`scripts/gcp-setup.sh`](scripts/gcp-setup.sh); it creates the registry, deploy
-identity, and repo trust, then prints the GitHub variables and secrets to set.
-[TEARDOWN.md](TEARDOWN.md) has exact commands to destroy everything, plus cost
-notes (roughly $0 at rest).
-
-The earlier single-service Render deployment is still described in
-[DEPLOY.md](DEPLOY.md).
+To deploy: in the Render dashboard choose **New > Blueprint**, point it at this
+repo, and set the secret env vars it prompts for (`DATABASE_URL` from Supabase,
+a random `API_KEY`, and `GROQ_API_KEY`; set the frontend's `BACKEND_API_KEY` to
+the same value as `API_KEY`). [TEARDOWN.md](TEARDOWN.md) covers removal and cost
+(free, so $0). The earlier single-service setup is in [DEPLOY.md](DEPLOY.md).
 
 ## Roadmap
 

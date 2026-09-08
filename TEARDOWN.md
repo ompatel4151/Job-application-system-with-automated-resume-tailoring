@@ -1,64 +1,34 @@
 # Teardown
 
-Commands to destroy everything Phase 2 creates, so nothing keeps billing. Set
-your values first:
-
-```bash
-export PROJECT_ID=your-project-id
-export REGION=us-central1
-gcloud config set project "$PROJECT_ID"
-```
+How to remove the deployment so nothing keeps running.
 
 ## Rough cost
 
-With the defaults here the standing cost is essentially **$0**:
+Standing cost is **$0**. Both services run on Render's **free** plan:
 
-- **Cloud Run** scales to zero. You pay only for request time; the free tier
-  (2M requests, 360k GB-seconds, 180k vCPU-seconds per month) covers a demo.
-- **Artifact Registry** stores two small images. Free up to 0.5 GB; beyond that
-  about $0.10/GB-month. Pennies.
-- **Workload Identity Federation**, the service account, and IAM are free.
+- Free web services sleep after ~15 minutes of inactivity, so the first request
+  after idle takes roughly 50 seconds to wake. They do not bill while asleep.
 - **Supabase** stays on its free tier (unchanged from Phase 1).
 - **LLM tokens** are the only variable cost, billed by Groq/Anthropic per call.
 
-The main way to get surprised is leaving `--min-instances` above zero (this
-setup does not) or storing many large images. Delete both below.
+Free services can't run up a bill, so teardown is about tidiness, not spend.
 
-## Destroy the Cloud Run services
+## Remove the Render services
 
-```bash
-gcloud run services delete job-tracker-frontend --region "$REGION" --quiet
-gcloud run services delete job-tracker-backend  --region "$REGION" --quiet
-```
+In the [Render dashboard](https://dashboard.render.com):
 
-## Delete the container images
+1. Open **job-tracker-frontend** > **Settings** > **Delete Web Service**.
+2. Do the same for **job-tracker-backend**.
+3. If you created them from a Blueprint, delete the Blueprint too
+   (**Blueprints** > the blueprint > **Delete**).
 
-```bash
-gcloud artifacts repositories delete job-tracker --location "$REGION" --quiet
-```
-
-## Remove the deploy identity (Workload Identity Federation + service account)
-
-```bash
-gcloud iam workload-identity-pools providers delete github-provider \
-  --location=global --workload-identity-pool=github-pool --quiet
-gcloud iam workload-identity-pools delete github-pool --location=global --quiet
-gcloud iam service-accounts delete \
-  gh-deployer@"$PROJECT_ID".iam.gserviceaccount.com --quiet
-```
-
-## Optional: the whole project
-
-If the project exists only for this app, deleting it removes everything above
-at once (and stops any possible billing):
-
-```bash
-gcloud projects delete "$PROJECT_ID"
-```
+The old Phase 1 service (**job-application-tracker**, the single Python app) can
+be deleted the same way once the new services are running.
 
 ## GitHub and Supabase
 
-- Remove the repository variables and secrets under **Settings > Secrets and
-  variables > Actions** if you want them gone.
+- Remove any repository secrets under **Settings > Secrets and variables >
+  Actions** if you want them gone. (The test-only CI needs none.)
 - The Supabase project is separate. Delete it from the Supabase dashboard if
-  you are done with the database.
+  you are done with the database. To only empty it, drop the tables; the app
+  recreates them on next start.

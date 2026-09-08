@@ -3,7 +3,12 @@
 // stays on the server and is never exposed to the client.
 import { NextRequest } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
+// Render's fromService injects a bare hostname; local dev uses a full URL.
+// Normalize to an absolute origin either way.
+const RAW_BACKEND = process.env.BACKEND_URL ?? "http://localhost:8000";
+const BACKEND_URL = /^https?:\/\//.test(RAW_BACKEND)
+  ? RAW_BACKEND
+  : `https://${RAW_BACKEND}`;
 const API_KEY = process.env.BACKEND_API_KEY;
 
 // Never cache proxied API responses.
