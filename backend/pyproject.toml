@@ -8,3 +8,6 @@ requires-python = ">=3.11"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+# Put the project root on sys.path so `import app` works regardless of how
+# pytest is invoked (the bare `pytest` console script does not add it).
+pythonpath = ["."]
