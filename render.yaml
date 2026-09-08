@@ -1,7 +1,8 @@
-# Render Blueprint: two Docker web services (backend + frontend) on the free
-# plan, built from their Dockerfiles. Create it in the dashboard with
-# New > Blueprint, pointed at this repo. Secrets (sync: false) are entered
-# there, never committed.
+# Render service definition for the backend (the frontend runs on Vercel).
+#
+# Reference/IaC for the backend Docker web service. On the free plan, create it
+# from the dashboard (New > Web Service, Root Directory: backend, runtime
+# Docker) and set the sync: false secrets there; they are never committed.
 #
 # Database stays on Supabase; set DATABASE_URL to the Session pooler string.
 
@@ -17,7 +18,8 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
-      # A long random string; the frontend must send the same value.
+      # A long random string; the Vercel frontend must send the same value as
+      # BACKEND_API_KEY.
       - key: API_KEY
         sync: false
       # One LLM key is enough (Groq is free). Leave the other unset.
@@ -27,21 +29,3 @@ services:
         sync: false
       - key: LLM_PROVIDER
         value: auto
-
-  - type: web
-    name: job-tracker-frontend
-    runtime: docker
-    plan: free
-    region: oregon
-    dockerfilePath: ./frontend/Dockerfile
-    dockerContext: ./frontend
-    envVars:
-      # Render injects the backend's hostname here; the proxy adds https://.
-      - key: BACKEND_URL
-        fromService:
-          type: web
-          name: job-tracker-backend
-          property: host
-      # Must match the backend's API_KEY above.
-      - key: BACKEND_API_KEY
-        sync: false

@@ -4,26 +4,29 @@ How to remove the deployment so nothing keeps running.
 
 ## Rough cost
 
-Standing cost is **$0**. Both services run on Render's **free** plan:
+Standing cost is **$0**, on free plans throughout:
 
-- Free web services sleep after ~15 minutes of inactivity, so the first request
-  after idle takes roughly 50 seconds to wake. They do not bill while asleep.
+- **Vercel** (frontend) Hobby plan is free for personal projects.
+- **Render** (backend) free web services sleep after ~15 minutes of inactivity,
+  so the first request after idle takes roughly 50 seconds to wake. They do not
+  bill while asleep.
 - **Supabase** stays on its free tier (unchanged from Phase 1).
 - **LLM tokens** are the only variable cost, billed by Groq/Anthropic per call.
 
-Free services can't run up a bill, so teardown is about tidiness, not spend.
+Nothing here can run up a bill, so teardown is about tidiness, not spend.
 
-## Remove the Render services
+## Remove the frontend (Vercel)
 
-In the [Render dashboard](https://dashboard.render.com):
+In the [Vercel dashboard](https://vercel.com/dashboard): open the project >
+**Settings** > **Delete Project**.
 
-1. Open **job-tracker-frontend** > **Settings** > **Delete Web Service**.
-2. Do the same for **job-tracker-backend**.
-3. If you created them from a Blueprint, delete the Blueprint too
-   (**Blueprints** > the blueprint > **Delete**).
+## Remove the backend (Render)
+
+In the [Render dashboard](https://dashboard.render.com): open
+**job-tracker-backend** > **Settings** > **Delete Web Service**.
 
 The old Phase 1 service (**job-application-tracker**, the single Python app) can
-be deleted the same way once the new services are running.
+be deleted the same way once the new backend is running.
 
 ## GitHub and Supabase
 
