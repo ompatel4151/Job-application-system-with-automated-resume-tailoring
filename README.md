@@ -196,8 +196,8 @@ these on every pull request.
 
 The two services deploy to the platform each suits best, both on free plans:
 
-- **Frontend on Vercel** — native Next.js hosting, no cold start.
-- **Backend on Render** — a Docker web service ([`render.yaml`](render.yaml)),
+- **Frontend on Vercel:** native Next.js hosting, no cold start.
+- **Backend on Render:** a Docker web service ([`render.yaml`](render.yaml)),
   built from `backend/Dockerfile`, with Postgres on Supabase.
 
 The browser only ever talks to the Vercel frontend, which proxies API calls
