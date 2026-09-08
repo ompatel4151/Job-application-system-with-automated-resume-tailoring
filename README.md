@@ -194,20 +194,26 @@ these on every pull request.
 
 ## Deployment
 
-Both services run as **Docker containers on Render** (free plan) with Postgres
-on Supabase:
+The two services deploy to the platform each suits best, both on free plans:
+
+- **Frontend on Vercel** — native Next.js hosting, no cold start.
+- **Backend on Render** — a Docker web service ([`render.yaml`](render.yaml)),
+  built from `backend/Dockerfile`, with Postgres on Supabase.
+
+The browser only ever talks to the Vercel frontend, which proxies API calls
+server-side to the Render backend (attaching `BACKEND_API_KEY`), so the split
+needs no CORS and the key never reaches the browser.
 
 - **CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs backend
   and frontend tests on every pull request.
-- **Deploy** is Render's native Docker pipeline: the Blueprint in
-  [`render.yaml`](render.yaml) defines both services, and Render rebuilds and
-  redeploys them from their Dockerfiles on every push to `main`.
+- **Deploy:** both platforms auto-deploy on push to `main` once connected.
 
-To deploy: in the Render dashboard choose **New > Blueprint**, point it at this
-repo, and set the secret env vars it prompts for (`DATABASE_URL` from Supabase,
-a random `API_KEY`, and `GROQ_API_KEY`; set the frontend's `BACKEND_API_KEY` to
-the same value as `API_KEY`). [TEARDOWN.md](TEARDOWN.md) covers removal and cost
-(free, so $0). The earlier single-service setup is in [DEPLOY.md](DEPLOY.md).
+To deploy: create the Render backend (New > Web Service, Root Directory
+`backend`, Docker, Free) with `DATABASE_URL`, `API_KEY`, and `GROQ_API_KEY`;
+then import the repo on Vercel with Root Directory `frontend` and set
+`BACKEND_URL` to the Render URL and `BACKEND_API_KEY` to the same value as the
+backend's `API_KEY`. [TEARDOWN.md](TEARDOWN.md) covers removal and cost (free,
+so $0). The earlier single-service setup is in [DEPLOY.md](DEPLOY.md).
 
 ## Roadmap
 
