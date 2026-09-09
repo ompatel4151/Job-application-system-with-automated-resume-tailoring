@@ -1,10 +1,11 @@
 # Job Application Tracker with AI Resume Tailoring
 
-**Live demo:** https://job-application-tracker-d3me.onrender.com
+**Live demo:** https://job-application-system-with-automat-rosy.vercel.app
 · [API docs](https://job-application-tracker-d3me.onrender.com/docs)
 
-> Hosted on Render's free tier, so the first request after a period of
-> inactivity takes about 30 to 60 seconds while the instance wakes up.
+> The frontend is on Vercel (instant); the backend is on Render's free tier, so
+> the first data load after a period of inactivity takes about 30 to 60 seconds
+> while the backend wakes up.
 
 A full-stack web application for managing a job search end to end: track every
 application through a status pipeline, store structured base resumes, and
