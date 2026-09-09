@@ -1,7 +1,7 @@
 # Job Application Tracker with AI Resume Tailoring
 
 **Live demo:** https://job-application-system-with-automat-rosy.vercel.app
-· [API docs](https://job-application-tracker-d3me.onrender.com/docs)
+· [API docs](https://job-tracker-backend-cm7h.onrender.com/docs)
 
 > The frontend is on Vercel (instant); the backend is on Render's free tier, so
 > the first data load after a period of inactivity takes about 30 to 60 seconds
