@@ -6,6 +6,8 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.main import app
+from app.schemas import MatchAnalysis, ResumeContent
+from app.services.tailoring import TailoringResult
 
 engine = create_engine(
     "sqlite://",
@@ -81,6 +83,26 @@ def make_application(client):
         return resp.json()
 
     return _make
+
+
+@pytest.fixture()
+def fake_tailoring(monkeypatch, sample_resume_content):
+    """Replace the LLM call with a deterministic fake, so no test spends tokens."""
+
+    def _fake(resume_content, job_description, company, role):
+        content = ResumeContent.model_validate(resume_content)
+        content.summary = f"Engineer targeting {role} at {company}."
+        return TailoringResult(
+            tailored_resume=content,
+            match_analysis=MatchAnalysis(
+                match_score=82,
+                matched_keywords=["Python", "FastAPI"],
+                missing_keywords=["Kubernetes"],
+                recommendations=["Highlight the Job Tracker project."],
+            ),
+        )
+
+    monkeypatch.setattr("app.routers.tailoring.tailoring.tailor_resume", _fake)
 
 
 @pytest.fixture()

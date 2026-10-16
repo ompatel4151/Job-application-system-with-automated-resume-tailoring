@@ -1,27 +1,7 @@
 import pytest
 
-from app.schemas import MatchAnalysis, ResumeContent
-from app.services.tailoring import TailoringResult, render_markdown
-
-
-@pytest.fixture()
-def fake_tailoring(monkeypatch, sample_resume_content):
-    """Replace the Claude call with a deterministic fake."""
-
-    def _fake(resume_content, job_description, company, role):
-        content = ResumeContent.model_validate(resume_content)
-        content.summary = f"Engineer targeting {role} at {company}."
-        return TailoringResult(
-            tailored_resume=content,
-            match_analysis=MatchAnalysis(
-                match_score=82,
-                matched_keywords=["Python", "FastAPI"],
-                missing_keywords=["Kubernetes"],
-                recommendations=["Highlight the Job Tracker project."],
-            ),
-        )
-
-    monkeypatch.setattr("app.routers.tailoring.tailoring.tailor_resume", _fake)
+from app.schemas import ResumeContent
+from app.services.tailoring import render_markdown
 
 
 def test_tailor_uses_default_resume(client, make_application, make_resume, fake_tailoring):
