@@ -29,3 +29,24 @@ My answer:
 
 **Q7. What did you decide not to fix, and why?**
 My answer:
+
+## Milestone 2: tests first
+
+**Q8. What's a contract (or characterization) test, and why write them
+before changing code?**
+My answer:
+
+**Q9. How do you know a test can actually catch a bug?** (Hint: what
+happened when the list order was flipped to ascending?)
+My answer:
+
+**Q10. Why did the `PATCH null` test fail with a database error instead of
+`assert 500 == 422`?**
+My answer:
+
+**Q11. Why mark the failing test `xfail(strict=True)` instead of leaving it
+red, or skipping it? What does `strict` add?**
+My answer:
+
+**Q12. Why move `fake_tailoring` into `conftest.py` instead of copying it?**
+My answer:
