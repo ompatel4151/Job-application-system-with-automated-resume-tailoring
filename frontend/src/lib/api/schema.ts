@@ -519,7 +519,9 @@ export interface operations {
     create_resume_api_resumes_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "idempotency-key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -711,7 +713,9 @@ export interface operations {
     create_application_api_applications_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "idempotency-key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -859,7 +863,9 @@ export interface operations {
     tailor_for_application_api_applications__application_id__tailor_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "idempotency-key"?: string | null;
+            };
             path: {
                 application_id: number;
             };
