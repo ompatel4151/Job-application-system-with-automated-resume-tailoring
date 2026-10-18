@@ -37,6 +37,11 @@ export default function TailorPage() {
   const [draft, setDraft] = useState<string | null>(null);
   const jd = draft ?? app?.job_description ?? "";
   const [result, setResult] = useState<TailoredResumeOut | null>(null);
+  // One key per "tailor this job description". If the request times out but
+  // the backend finished, a retry replays the saved result instead of paying
+  // for a second LLM call. Rotated after success and when the JD is edited,
+  // because the JD isn't part of the request body the backend fingerprints.
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
   const hasDefaultResume = (resumes ?? []).some((r) => r.is_default);
   const busy = tailor.isPending || update.isPending;
@@ -50,8 +55,9 @@ export default function TailorPage() {
       if (app && jd !== (app.job_description ?? "")) {
         await update.mutateAsync({ id, body: { job_description: jd } });
       }
-      const tailored = await tailor.mutateAsync({ applicationId: id });
+      const tailored = await tailor.mutateAsync({ applicationId: id, idempotencyKey });
       setResult(tailored);
+      setIdempotencyKey(crypto.randomUUID());
       toast.success("Resume tailored");
     } catch (e) {
       toast.error((e as Error).message);
@@ -96,7 +102,10 @@ export default function TailorPage() {
         </label>
         <Textarea
           value={jd}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            setIdempotencyKey(crypto.randomUUID());
+          }}
           rows={8}
           placeholder="Paste the job description here…"
         />

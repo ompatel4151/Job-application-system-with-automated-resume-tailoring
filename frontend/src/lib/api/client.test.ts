@@ -43,6 +43,22 @@ describe("api client", () => {
     await expect(api.deleteApplication(1)).resolves.toBeUndefined();
   });
 
+  it("sends an Idempotency-Key header only when given one", async () => {
+    // A fresh Response per call: a response body can only be read once.
+    const spy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => Response.json({ id: 1 }, { status: 201 }));
+    const body = { company: "Acme", role: "SWE", status: "saved" as const };
+
+    await api.createApplication(body, "key-123");
+    await api.createApplication(body);
+
+    const headersOf = (call: number) =>
+      (spy.mock.calls[call][1] as RequestInit).headers as Record<string, string>;
+    expect(headersOf(0)["Idempotency-Key"]).toBe("key-123");
+    expect(headersOf(1)["Idempotency-Key"]).toBeUndefined();
+  });
+
   it("exposes ApiError as an Error subclass", () => {
     expect(new ApiError("x", 400)).toBeInstanceOf(Error);
   });

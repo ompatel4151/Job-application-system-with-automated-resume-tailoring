@@ -11,7 +11,6 @@ import {
 import { api } from "./client";
 import type {
   ApplicationCreate,
-  ApplicationStatus,
   ApplicationUpdate,
   ResumeCreate,
 } from "./types";
@@ -65,7 +64,13 @@ function useInvalidateApplications() {
 export function useCreateApplication() {
   const invalidate = useInvalidateApplications();
   return useMutation({
-    mutationFn: (body: ApplicationCreate) => api.createApplication(body),
+    mutationFn: ({
+      body,
+      idempotencyKey,
+    }: {
+      body: ApplicationCreate;
+      idempotencyKey?: string;
+    }) => api.createApplication(body, idempotencyKey),
     onSuccess: invalidate,
   });
 }
@@ -94,7 +99,13 @@ export function useDeleteApplication() {
 export function useCreateResume() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: ResumeCreate) => api.createResume(body),
+    mutationFn: ({
+      body,
+      idempotencyKey,
+    }: {
+      body: ResumeCreate;
+      idempotencyKey?: string;
+    }) => api.createResume(body, idempotencyKey),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.resumes }),
   });
 }
@@ -106,12 +117,12 @@ export function useTailor() {
     mutationFn: ({
       applicationId,
       resumeId,
+      idempotencyKey,
     }: {
       applicationId: number;
       resumeId?: number;
-      // status is only used by callers to know which status the app moved to
-      status?: ApplicationStatus;
-    }) => api.tailor(applicationId, resumeId),
+      idempotencyKey?: string;
+    }) => api.tailor(applicationId, resumeId, idempotencyKey),
     onSuccess: (tailored) => {
       invalidate();
       qc.invalidateQueries({ queryKey: keys.tailored(tailored.application_id) });

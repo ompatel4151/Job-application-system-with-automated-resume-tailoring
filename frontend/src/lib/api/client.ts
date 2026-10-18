@@ -45,6 +45,12 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+// A create sent with the same key twice is only performed once by the backend.
+// Callers keep one key per user action and reuse it if they retry.
+function idempotencyHeader(key?: string): Record<string, string> {
+  return key ? { "Idempotency-Key": key } : {};
+}
+
 export const api = {
   // Applications
   listApplications: (status?: ApplicationStatus) =>
@@ -52,9 +58,10 @@ export const api = {
       `/applications${status ? `?status=${status}` : ""}`,
     ),
   getApplication: (id: number) => http<ApplicationOut>(`/applications/${id}`),
-  createApplication: (body: ApplicationCreate) =>
+  createApplication: (body: ApplicationCreate, idempotencyKey?: string) =>
     http<ApplicationOut>(`/applications`, {
       method: "POST",
+      headers: idempotencyHeader(idempotencyKey),
       body: JSON.stringify(body),
     }),
   updateApplication: (id: number, body: ApplicationUpdate) =>
@@ -68,16 +75,18 @@ export const api = {
 
   // Resumes
   listResumes: () => http<ResumeOut[]>(`/resumes`),
-  createResume: (body: ResumeCreate) =>
+  createResume: (body: ResumeCreate, idempotencyKey?: string) =>
     http<ResumeOut>(`/resumes`, {
       method: "POST",
+      headers: idempotencyHeader(idempotencyKey),
       body: JSON.stringify(body),
     }),
 
   // Tailoring
-  tailor: (applicationId: number, resumeId?: number) =>
+  tailor: (applicationId: number, resumeId?: number, idempotencyKey?: string) =>
     http<TailoredResumeOut>(`/applications/${applicationId}/tailor`, {
       method: "POST",
+      headers: idempotencyHeader(idempotencyKey),
       body: JSON.stringify({ resume_id: resumeId ?? null }),
     }),
   listTailored: (applicationId: number) =>

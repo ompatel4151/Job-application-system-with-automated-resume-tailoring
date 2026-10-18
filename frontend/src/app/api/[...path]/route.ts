@@ -20,6 +20,9 @@ async function proxy(req: NextRequest, path: string[]): Promise<Response> {
   const headers = new Headers();
   const contentType = req.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
+  // Lets the backend recognize a retried create (see backend/app/idempotency.py).
+  const idempotencyKey = req.headers.get("idempotency-key");
+  if (idempotencyKey) headers.set("idempotency-key", idempotencyKey);
   if (API_KEY) headers.set("x-api-key", API_KEY);
 
   const hasBody = req.method !== "GET" && req.method !== "HEAD";

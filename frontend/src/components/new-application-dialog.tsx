@@ -29,6 +29,9 @@ export function NewApplicationDialog() {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<ApplicationStatus>("saved");
   const create = useCreateApplication();
+  // One key per new application: a retry after an error reuses it, so the
+  // backend can't create the application twice. Replaced only after success.
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -39,18 +42,22 @@ export function NewApplicationDialog() {
 
     create.mutate(
       {
-        company,
-        role,
-        status,
-        job_url: String(form.get("job_url") ?? "").trim() || null,
-        job_description:
-          String(form.get("job_description") ?? "").trim() || null,
+        body: {
+          company,
+          role,
+          status,
+          job_url: String(form.get("job_url") ?? "").trim() || null,
+          job_description:
+            String(form.get("job_description") ?? "").trim() || null,
+        },
+        idempotencyKey,
       },
       {
         onSuccess: () => {
           toast.success("Application added");
           setOpen(false);
           setStatus("saved");
+          setIdempotencyKey(crypto.randomUUID());
         },
         onError: (err) => toast.error((err as Error).message),
       },

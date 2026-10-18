@@ -16,6 +16,8 @@ export default function ResumesPage() {
   const { data: resumes, isLoading } = useResumes();
   const create = useCreateResume();
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  // Reused if the user retries after an error; replaced after success.
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -48,12 +50,13 @@ export default function ResumesPage() {
     }
 
     create.mutate(
-      { name, is_default: true, content },
+      { body: { name, is_default: true, content }, idempotencyKey },
       {
         onSuccess: () => {
           toast.success("Base resume saved");
           (e.target as HTMLFormElement).reset();
           setAdvancedOpen(false);
+          setIdempotencyKey(crypto.randomUUID());
         },
         onError: (err) => toast.error((err as Error).message),
       },
