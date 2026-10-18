@@ -104,6 +104,18 @@ def test_crud_has_its_own_bucket(
     assert client.get("/api/applications").status_code == 200
 
 
+def test_429_message_uses_singular_for_one_second(client, monkeypatch, clock):
+    """Seen live: "Try again in 1 seconds." A 60/min bucket refills 1 token/s."""
+    monkeypatch.setattr(
+        ratelimit, "API", ratelimit.TokenBucketLimiter(1, 1, clock=lambda: clock[0])
+    )
+    client.get("/api/applications")
+
+    resp = client.get("/api/applications")
+
+    assert resp.json()["detail"] == "Too many requests. Try again in 1 second."
+
+
 def test_health_is_never_limited(client, tiny_api_bucket):
     client.get("/api/applications")  # uses the only token
 

@@ -50,7 +50,14 @@ async function proxy(req: NextRequest, path: string[]): Promise<Response> {
 
   // Pass through only the headers a client needs.
   const out = new Headers();
-  for (const h of ["content-type", "content-disposition"]) {
+  // retry-after: how long to wait after a 429 (rate limit).
+  // idempotent-replayed: marks a retried create that was answered from storage.
+  for (const h of [
+    "content-type",
+    "content-disposition",
+    "retry-after",
+    "idempotent-replayed",
+  ]) {
     const v = res.headers.get(h);
     if (v) out.set(h, v);
   }

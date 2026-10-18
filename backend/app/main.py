@@ -115,7 +115,7 @@ async def rate_limit(request: Request, call_next):
         seconds = math.ceil(wait)
         return error_response(
             429,
-            f"Too many requests. Try again in {seconds} seconds.",
+            f"Too many requests. Try again in {seconds} second{'' if seconds == 1 else 's'}.",
             headers={"Retry-After": str(seconds)},
         )
     return await call_next(request)
