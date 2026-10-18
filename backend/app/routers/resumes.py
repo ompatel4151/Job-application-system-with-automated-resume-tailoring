@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
-from app import models
+from app import idempotency, models
 from app.database import get_db
+from app.idempotency import IdempotencyKeyHeader
 from app.models import utcnow
 from app.schemas import ResumeContent, ResumeCreate, ResumeOut, ResumeUpdate
 from app.services import extraction
@@ -19,7 +20,18 @@ def _clear_default(db: Session) -> None:
 
 
 @router.post("", response_model=ResumeOut, status_code=201)
-def create_resume(payload: ResumeCreate, db: Session = Depends(get_db)):
+def create_resume(
+    payload: ResumeCreate,
+    request: Request,
+    idempotency_key: IdempotencyKeyHeader = None,
+    db: Session = Depends(get_db),
+):
+    row, replay = idempotency.claim(
+        db, idempotency_key, request.method, request.url.path, payload.model_dump(mode="json")
+    )
+    if replay is not None:
+        return replay
+
     if payload.is_default:
         _clear_default(db)
     resume = models.Resume(
@@ -28,9 +40,11 @@ def create_resume(payload: ResumeCreate, db: Session = Depends(get_db)):
         content=payload.content.model_dump(),
     )
     db.add(resume)
+    db.flush()
+    out = ResumeOut.model_validate(resume)
+    idempotency.save(row, 201, out.model_dump(mode="json"))
     db.commit()
-    db.refresh(resume)
-    return resume
+    return out
 
 
 _EXTENSION_TYPES = {

@@ -78,3 +78,18 @@ class TailoredResume(Base):
 
     application: Mapped["Application"] = relationship(back_populates="tailored_resumes")
     resume: Mapped["Resume"] = relationship(back_populates="tailored_resumes")
+
+
+class IdempotencyKey(Base):
+    """The stored response of a create request sent with an Idempotency-Key."""
+
+    __tablename__ = "idempotency_keys"
+
+    # Primary key = unique: two requests can never both claim the same key.
+    key: Mapped[str] = mapped_column(String(255), primary_key=True)
+    # Hash of method + path + body, to catch a key reused for a different request.
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    status_code: Mapped[int | None] = mapped_column(Integer)
+    response_body: Mapped[dict | None] = mapped_column(JSON)
+    # ponytail: keys are kept forever; delete rows older than ~24h if the table grows.
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

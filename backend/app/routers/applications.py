@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app import models
+from app import idempotency, models
 from app.database import get_db
+from app.idempotency import IdempotencyKeyHeader
 from app.models import ApplicationStatus, utcnow
 from app.schemas import (
     ApplicationCreate,
@@ -59,14 +60,27 @@ def _tailored_count(db: Session, application_id: int) -> int:
 
 
 @router.post("", response_model=ApplicationOut, status_code=201)
-def create_application(payload: ApplicationCreate, db: Session = Depends(get_db)):
+def create_application(
+    payload: ApplicationCreate,
+    request: Request,
+    idempotency_key: IdempotencyKeyHeader = None,
+    db: Session = Depends(get_db),
+):
+    row, replay = idempotency.claim(
+        db, idempotency_key, request.method, request.url.path, payload.model_dump(mode="json")
+    )
+    if replay is not None:
+        return replay
+
     application = models.Application(**payload.model_dump())
     if application.status in APPLIED_STAGES:
         application.applied_at = utcnow()
     db.add(application)
+    db.flush()  # assigns the id; the commit happens once, below
+    out = _to_out(application)
+    idempotency.save(row, 201, out.model_dump(mode="json"))
     db.commit()
-    db.refresh(application)
-    return _to_out(application)
+    return out
 
 
 @router.get("", response_model=list[ApplicationOut])

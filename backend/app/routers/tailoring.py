@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
-from app import models
+from app import idempotency, models
 from app.database import get_db
+from app.idempotency import IdempotencyKeyHeader
 from app.schemas import TailoredResumeOut, TailorRequest
 from app.services import tailoring
 
@@ -16,8 +17,19 @@ router = APIRouter(prefix="/api", tags=["tailoring"])
     status_code=201,
 )
 def tailor_for_application(
-    application_id: int, payload: TailorRequest, db: Session = Depends(get_db)
+    application_id: int,
+    payload: TailorRequest,
+    request: Request,
+    idempotency_key: IdempotencyKeyHeader = None,
+    db: Session = Depends(get_db),
 ):
+    # Claim first: a retried tailor must not pay for a second LLM call.
+    row, replay = idempotency.claim(
+        db, idempotency_key, request.method, request.url.path, payload.model_dump(mode="json")
+    )
+    if replay is not None:
+        return replay
+
     application = db.get(models.Application, application_id)
     if not application:
         raise HTTPException(404, "Application not found")
@@ -62,9 +74,11 @@ def tailor_for_application(
         markdown=tailoring.render_markdown(result.tailored_resume),
     )
     db.add(tailored)
+    db.flush()
+    out = TailoredResumeOut.model_validate(tailored)
+    idempotency.save(row, 201, out.model_dump(mode="json"))
     db.commit()
-    db.refresh(tailored)
-    return tailored
+    return out
 
 
 @router.get(
