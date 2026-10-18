@@ -56,6 +56,22 @@ On commit `5bfe82b`, same machine:
   returned 201, `PATCH null` raised the database error again, errors had no
   `code`, and a score of 150 passed through.
 
+## Milestone 5: rate limiting
+
+On commit `b6dd38d`, same machine:
+
+- Backend: `103 passed in 0.51s`. That's 10 new rate-limit tests; the tests
+  use a fake clock, so no timing is involved.
+- Frontend: `10 passed`, lint clean, build OK.
+- Before the code existed, the test file failed to import (`cannot import
+  name 'ratelimit'`).
+- Check that the security test can fail: I removed the "trust X-Forwarded-For
+  only with the API key" condition, and
+  `test_spoofed_forwarded_ip_is_ignored_without_the_key` failed (1 failed,
+  9 passed). Then I restored the code.
+- The limits (5/min for LLM endpoints, 60/min otherwise) are design choices,
+  not measurements.
+
 **Live deployment.** No performance numbers exist. The app was never load
 tested, and no latency or traffic was measured. Load testing is milestone 6
 and will run **locally only**.

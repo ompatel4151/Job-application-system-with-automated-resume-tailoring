@@ -104,3 +104,31 @@ My answer:
 
 **Q25. How did `xfail(strict=True)` tell you the bug was fixed?**
 My answer:
+
+## Milestone 5: rate limiting
+
+**Q26. Explain the token bucket in your own words. What do `capacity` and
+the refill rate each control?**
+My answer:
+
+**Q27. Compare token bucket, fixed window and sliding window. What's the
+"boundary burst" problem with a fixed window?**
+My answer:
+
+**Q28. Why are there two buckets (LLM and general) instead of one?**
+My answer:
+
+**Q29. Behind the Vercel proxy, every request comes from the same IP. How
+did you handle that, and why can't a caller fake `X-Forwarded-For` to get
+around it?**
+My answer:
+
+**Q30. This limiter keeps counts in memory. What breaks with 3 servers, or
+after a restart? How would you fix it?** (Think: Redis, gateway.)
+My answer:
+
+**Q31. Why does a 429 include `Retry-After`?**
+My answer:
+
+**Q32. What does rate limiting NOT fix in this app?** (Hint: audit #1.)
+My answer:
