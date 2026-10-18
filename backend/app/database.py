@@ -5,9 +5,16 @@ from app.config import settings
 
 
 def _normalize(url: str) -> str:
-    """Render/Heroku hand out postgres:// URLs; SQLAlchemy 2 wants postgresql://."""
-    if url.startswith("postgres://"):
-        return url.replace("postgres://", "postgresql://", 1)
+    """Make a Postgres URL name the driver we actually install (psycopg2).
+
+    Render/Heroku hand out postgres://, which SQLAlchemy 2 rejects. A bare
+    postgresql:// lets SQLAlchemy pick the driver, and SQLAlchemy 2.1 changed
+    that default to psycopg 3, which isn't installed. URLs that already name a
+    driver (postgresql+...://) are left alone.
+    """
+    for scheme in ("postgres://", "postgresql://"):
+        if url.startswith(scheme):
+            return "postgresql+psycopg2://" + url[len(scheme):]
     return url
 
 
