@@ -50,3 +50,32 @@ My answer:
 
 **Q12. Why move `fake_tailoring` into `conftest.py` instead of copying it?**
 My answer:
+
+## Milestone 3: idempotency
+
+**Q13. What does "idempotent" mean? Which HTTP methods are idempotent by
+design, and why isn't POST?**
+My answer:
+
+**Q14. Why do payment APIs and job-queue APIs need idempotency keys?** Give
+a concrete failure story for each.
+My answer:
+
+**Q15. Why use an Idempotency-Key header instead of a unique constraint on
+(company, role)?**
+My answer:
+
+**Q16. Two requests with the same key arrive at the same moment. Walk
+through exactly what stops both from creating a record.**
+My answer:
+
+**Q17. Why is only a successful response stored, and not a failed one?**
+My answer:
+
+**Q18. Why does the tailor page change its key when the job description is
+edited?**
+My answer:
+
+**Q19. What are the limits of this design?** (Think: keys stored forever, no
+users, holding a transaction open during the LLM call.)
+My answer:

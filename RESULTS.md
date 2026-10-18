@@ -32,6 +32,19 @@ Output: `70 passed, 1 xfailed in 0.71s`
   to fail until milestone 4.
 - Times are single runs and not benchmarks.
 
+## Milestone 3: idempotency
+
+On commit `9117019`, same machine:
+
+- Backend, `cd backend && ../.venv/bin/python -m pytest`:
+  `77 passed, 1 xfailed in 0.81s`. That's 7 new idempotency tests; the
+  xfail is still audit #4.
+- Frontend, `cd frontend && npm test`: `10 passed`. One new test checks the
+  `Idempotency-Key` header is sent.
+- Before the fix, the same tests ran red: 5 failed, 2 passed. The retried
+  create returned a new id (2 instead of 1), and the retried tailor called
+  the model twice.
+
 **Live deployment.** No performance numbers exist. The app was never load
 tested, and no latency or traffic was measured. Load testing is milestone 6
 and will run **locally only**.
