@@ -132,3 +132,35 @@ My answer:
 
 **Q32. What does rate limiting NOT fix in this app?** (Hint: audit #1.)
 My answer:
+
+## Milestone 6: load test and indexing
+
+**Q33. Describe your load test: machine, data, request mix, concurrency.
+Why does each detail matter for interpreting the numbers?**
+My answer:
+
+**Q34. What are p50, p95 and p99, and why report percentiles instead of the
+average?**
+My answer:
+
+**Q35. How did you find the bottleneck before fixing it?** (What did EXPLAIN
+show?)
+My answer:
+
+**Q36. Why doesn't Postgres index foreign keys automatically, and when
+should you add one?**
+My answer:
+
+**Q37. The query got about 30× faster but throughput only about 1.36×.
+Explain the gap.** (Little's law.)
+My answer:
+
+**Q38. What would you fix next, and how would you prove it helped?**
+My answer:
+
+**Q39. Your load generator ran on the same machine as the server. What does
+that do to the results?**
+My answer:
+
+**Q40. Adding an index has costs too. What are they?**
+My answer:
