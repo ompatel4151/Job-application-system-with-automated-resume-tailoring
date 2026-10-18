@@ -1,3 +1,4 @@
+import hmac
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -28,6 +29,13 @@ class Settings(BaseSettings):
     # tools and the API docs.
     cors_origins: str = "http://localhost:3000"
 
+    # Per-client rate limits on /api (see app/ratelimit.py). Off only for local
+    # experiments such as load testing.
+    rate_limit_enabled: bool = True
+    # Use X-Forwarded-For as the client identity. Only trusted on requests that
+    # carry the valid API key, i.e. requests from our own frontend proxy.
+    trust_forwarded_for: bool = False
+
     # Which LLM backend to tailor with. "auto" picks Claude when an Anthropic
     # key is present, otherwise Groq, so setting a single key is enough.
     llm_provider: Provider = "auto"
@@ -42,6 +50,16 @@ class Settings(BaseSettings):
     # gpt-oss is text-only, so reading an uploaded resume image needs a
     # separate multimodal model (best-effort JSON, not strict schemas).
     groq_vision_model: str = "qwen/qwen3.6-27b"
+
+    def api_key_matches(self, provided: str | None) -> bool:
+        """True only if a key is configured and `provided` equals it.
+
+        compare_digest takes the same time however many characters match, so
+        response timing can't reveal how close a guess is (audit #8).
+        """
+        if not self.api_key or provided is None:
+            return False
+        return hmac.compare_digest(provided.encode(), self.api_key.encode())
 
     def cors_origin_list(self) -> list[str]:
         """CORS origins as a clean list."""

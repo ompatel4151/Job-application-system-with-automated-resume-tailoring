@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app import ratelimit
 from app.database import Base, get_db
 from app.main import app
 from app.schemas import MatchAnalysis, ResumeContent
@@ -15,6 +16,12 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+@pytest.fixture(autouse=True)
+def _fresh_rate_limits():
+    """Rate limiting stays on in every test, but each test starts with full buckets."""
+    ratelimit.reset()
 
 
 @pytest.fixture()

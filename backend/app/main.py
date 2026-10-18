@@ -1,4 +1,5 @@
 import logging
+import math
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -10,6 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.exc import OperationalError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app import ratelimit
 from app.config import settings
 from app.database import Base, engine
 from app.routers import applications, resumes, tailoring
@@ -98,9 +100,24 @@ async def require_api_key(request: Request, call_next):
         settings.api_key
         and request.url.path.startswith("/api")
         and request.method != "OPTIONS"
-        and request.headers.get("x-api-key") != settings.api_key
+        and not settings.api_key_matches(request.headers.get("x-api-key"))
     ):
         return error_response(401, "Invalid or missing API key.")
+    return await call_next(request)
+
+
+# Registered after require_api_key, so it wraps it and runs first: a flood is
+# turned away before any other work happens.
+@app.middleware("http")
+async def rate_limit(request: Request, call_next):
+    wait = ratelimit.retry_after(request)
+    if wait:
+        seconds = math.ceil(wait)
+        return error_response(
+            429,
+            f"Too many requests. Try again in {seconds} seconds.",
+            headers={"Retry-After": str(seconds)},
+        )
     return await call_next(request)
 
 
