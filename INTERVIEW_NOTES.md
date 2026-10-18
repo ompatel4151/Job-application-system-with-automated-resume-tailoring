@@ -79,3 +79,28 @@ My answer:
 **Q19. What are the limits of this design?** (Think: keys stored forever, no
 users, holding a transaction open during the LLM call.)
 My answer:
+
+## Milestone 4: validation and errors
+
+**Q20. Why validate at the API boundary when the database already has
+NOT NULL and VARCHAR(200)?**
+My answer:
+
+**Q21. What's the difference between 400, 404, 409, 422 and 500? Give an
+example of each from this API.**
+My answer:
+
+**Q22. Why does every error keep `detail` as a string and add a separate
+`code`?**
+My answer:
+
+**Q23. The 500 handler logs the error but returns "Internal server error".
+Why not send the real message back?**
+My answer:
+
+**Q24. Why is `match_score` clamped in code instead of with `ge=0, le=100`
+on the schema?**
+My answer:
+
+**Q25. How did `xfail(strict=True)` tell you the bug was fixed?**
+My answer:

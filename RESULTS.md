@@ -45,6 +45,17 @@ On commit `9117019`, same machine:
   create returned a new id (2 instead of 1), and the retried tailor called
   the model twice.
 
+## Milestone 4: validation and errors
+
+On commit `5bfe82b`, same machine:
+
+- Backend: `93 passed in 0.43s`, 0 xfailed. That's 16 new validation tests;
+  the audit #4 known-issue test was removed once it started passing.
+- Frontend: `10 passed`, lint clean, build OK.
+- Before the fix the new tests ran red: 14 failed, 2 passed. Every bad input
+  returned 201, `PATCH null` raised the database error again, errors had no
+  `code`, and a score of 150 passed through.
+
 **Live deployment.** No performance numbers exist. The app was never load
 tested, and no latency or traffic was measured. Load testing is milestone 6
 and will run **locally only**.
