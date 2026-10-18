@@ -4,9 +4,11 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.exc import OperationalError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
 from app.database import Base, engine
@@ -16,6 +18,28 @@ logger = logging.getLogger(__name__)
 
 CREATE_RETRIES = 5
 RETRY_DELAY_SECONDS = 2
+
+# Every error response has the same shape: {"detail": <human message>,
+# "code": <machine-readable>}. 422s add "errors": [{"field", "message"}].
+# "detail" stays a string so existing clients that show it keep working.
+ERROR_CODES = {
+    400: "bad_request",
+    401: "unauthorized",
+    404: "not_found",
+    405: "method_not_allowed",
+    409: "conflict",
+    413: "payload_too_large",
+    415: "unsupported_media_type",
+    422: "validation_error",
+    429: "rate_limited",
+    500: "internal_error",
+    502: "upstream_error",
+}
+
+
+def error_response(status: int, detail: str, headers=None, **extra) -> JSONResponse:
+    body = {"detail": detail, "code": ERROR_CODES.get(status, "error"), **extra}
+    return JSONResponse(body, status_code=status, headers=headers)
 
 
 def init_db(retries: int = CREATE_RETRIES, delay: float = RETRY_DELAY_SECONDS) -> None:
@@ -76,8 +100,35 @@ async def require_api_key(request: Request, call_next):
         and request.method != "OPTIONS"
         and request.headers.get("x-api-key") != settings.api_key
     ):
-        return JSONResponse({"detail": "Invalid or missing API key."}, status_code=401)
+        return error_response(401, "Invalid or missing API key.")
     return await call_next(request)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_error(request: Request, exc: StarletteHTTPException):
+    # Covers our HTTPExceptions and the framework's own 404/405 for bad routes.
+    return error_response(exc.status_code, str(exc.detail), headers=exc.headers)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError):
+    errors = [
+        {
+            # ("body", "company") -> "company"; ("header", "idempotency-key") stays prefixed.
+            "field": ".".join(str(part) for part in err["loc"] if part != "body"),
+            "message": err["msg"].removeprefix("Value error, "),
+        }
+        for err in exc.errors()
+    ]
+    summary = "; ".join(f"{e['field']}: {e['message']}" for e in errors)
+    return error_response(422, summary or "Invalid request.", errors=errors)
+
+
+@app.exception_handler(Exception)
+async def unhandled_error(request: Request, exc: Exception):
+    # Log the real error for us; never send internals (or secrets) to the client.
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return error_response(500, "Internal server error")
 
 
 app.include_router(resumes.router)

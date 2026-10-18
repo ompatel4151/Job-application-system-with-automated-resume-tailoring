@@ -204,6 +204,11 @@ def tailor_resume(
     # Contact details are facts, not tailoring targets, so always carry them over.
     result.tailored_resume.full_name = base.full_name
     result.tailored_resume.contact = base.contact
+    # The schema says 0-100 but nothing forces the model to obey. Clamped here
+    # rather than as a schema bound, because this schema is also sent to the
+    # LLM providers, and whether their strict modes accept min/max is untested.
+    score = result.match_analysis.match_score
+    result.match_analysis.match_score = max(0, min(100, score))
     return result
 
 

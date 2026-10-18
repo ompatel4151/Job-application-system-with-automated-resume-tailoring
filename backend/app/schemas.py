@@ -1,8 +1,38 @@
+import re
 from datetime import datetime
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+)
 
 from app.models import ApplicationStatus
+
+# Limits match the database columns, so bad input is a 422 here instead of a
+# database error later. The text caps are a judgment call: real job postings
+# are a few thousand characters, and every character of a job description is
+# sent to the LLM (and paid for) when tailoring.
+ShortText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+
+
+def _http_url(value: str) -> str:
+    # Only web links: blocks javascript: and data: URLs (audit #5). A validator
+    # instead of a regex pattern, so the user-facing message is readable.
+    if not re.fullmatch(r"https?://\S+", value):
+        raise ValueError("must be a web address starting with http:// or https://")
+    return value
+
+
+HttpUrl = Annotated[
+    str, StringConstraints(strip_whitespace=True, max_length=500), AfterValidator(_http_url)
+]
+JobDescription = Annotated[str, StringConstraints(max_length=20_000)]
+Notes = Annotated[str, StringConstraints(max_length=10_000)]
 
 
 # ---------- Resume content (shared shape for base and tailored resumes) ----------
@@ -41,13 +71,13 @@ class ResumeContent(BaseModel):
 # ---------- Resumes ----------
 
 class ResumeCreate(BaseModel):
-    name: str
+    name: ShortText
     is_default: bool = False
     content: ResumeContent
 
 
 class ResumeUpdate(BaseModel):
-    name: str | None = None
+    name: ShortText | None = None
     is_default: bool | None = None
     content: ResumeContent | None = None
 
@@ -66,21 +96,31 @@ class ResumeOut(BaseModel):
 # ---------- Applications ----------
 
 class ApplicationCreate(BaseModel):
-    company: str
-    role: str
+    company: ShortText
+    role: ShortText
     status: ApplicationStatus = ApplicationStatus.saved
-    job_description: str | None = None
-    job_url: str | None = None
-    notes: str | None = None
+    job_description: JobDescription | None = None
+    job_url: HttpUrl | None = None
+    notes: Notes | None = None
 
 
 class ApplicationUpdate(BaseModel):
-    company: str | None = None
-    role: str | None = None
+    company: ShortText | None = None
+    role: ShortText | None = None
     status: ApplicationStatus | None = None
-    job_description: str | None = None
-    job_url: str | None = None
-    notes: str | None = None
+    job_description: JobDescription | None = None
+    job_url: HttpUrl | None = None
+    notes: Notes | None = None
+
+    # "| None" here means "may be omitted". For these three, an explicit null
+    # would write NULL into a NOT NULL column (audit #4), so reject it.
+    # Validators only run on fields the client actually sent.
+    @field_validator("company", "role", "status")
+    @classmethod
+    def _not_null(cls, value):
+        if value is None:
+            raise ValueError("cannot be null; omit the field to leave it unchanged")
+        return value
 
 
 class ApplicationOut(BaseModel):
