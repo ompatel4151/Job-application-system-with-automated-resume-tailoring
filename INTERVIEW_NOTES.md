@@ -164,3 +164,60 @@ My answer:
 
 **Q40. Adding an index has costs too. What are they?**
 My answer:
+
+## Milestone 7: the big picture
+
+**Q41. If this app had to run in two regions (say US and Europe), what
+breaks first, and what would you change?** Think about each piece:
+- *Idempotency:* a retry landing in the other region won't see the stored
+  key unless both regions share the database. What are the options?
+- *Rate limiting:* in-memory buckets per process. What happens with many
+  servers in two regions? Global vs per-region limits?
+- *Database:* one primary for writes, or one per region? What does a read
+  replica's lag do to "create, then immediately read"?
+- *Indexes and migrations:* how do you roll a schema change out to every
+  region safely?
+My answer:
+
+**Q42. Walk me through this project's hardening in 60 seconds.**
+My answer:
+
+**Q43. What did you NOT fix, and why is that acceptable for now?**
+My answer:
+
+**Q44. Which number in RESULTS.md would you defend most carefully, and how
+was it measured?**
+My answer:
+
+## Make it mine
+
+Before listing this on a resume, implement these three changes yourself.
+
+1. **The milestone 2 exercise:** a contract test that `PUT /api/resumes/{id}`
+   changes only the fields you send. Prove it can fail by breaking
+   `update_resume`, then restore it from a backup copy, not `git checkout`.
+2. **Paginate the board list** (audit #11, now the slowest endpoint). Add
+   `limit` and `offset` (or a cursor) to `GET /api/applications`, update the
+   frontend, write the tests, then re-run `scripts/loadtest.py` and record
+   before and after in RESULTS.md.
+3. **Set an explicit LLM timeout** (audit #2). Pass `timeout=` to both SDK
+   clients, choose the value yourself and justify it, and test that a timeout
+   becomes a clean 502.
+
+You must be able to explain each of these without notes:
+
+- [ ] Every finding in AUDIT.md: why it matters, and why some are still open
+- [ ] How the idempotency claim/replay works, including the concurrent case
+      and why only successes are stored
+- [ ] Why the tailor page rotates its key when the job description changes
+- [ ] The token bucket: capacity, refill, Retry-After, and why X-Forwarded-For
+      is trusted only with the API key
+- [ ] Why rate limits in memory don't work across servers, and the fix
+- [ ] The EXPLAIN output before and after the index, and what a sequential
+      scan is
+- [ ] Why the query got about 30× faster but throughput only about 1.36×
+      (Little's law)
+- [ ] Every number in RESULTS.md: the command, the machine, and the dataset
+      behind it
+- [ ] Contract tests, strict xfail, and how you showed a test can fail
+- [ ] Why audit #1 (the open proxy) still needs real auth

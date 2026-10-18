@@ -207,6 +207,30 @@ startup fail. Not investigated further. This milestone deploys nothing.
 deploys. To keep "nothing deployed", this work stays on branches until you
 decide otherwise.
 
+## Status after milestones 2 to 6
+
+Re-running `scripts/audit_probe.py` on the hardened code: probes 2 to 6 now
+return 422 instead of 201 or 500, and errors carry a `code`. Probe 1 still
+creates 2 rows on purpose, because it sends no `Idempotency-Key` and keyless
+requests behave as before.
+
+| # | Finding | Status |
+|---|---|---|
+| 1 | Open proxy | **Open.** Needs user auth. Rate limiting (M5) only limits the damage. |
+| 2 | LLM endpoints unlimited | **Mostly fixed.** Rate limit 5/min (M5), idempotent retries (M3), 20k job description cap (M4). **Still open:** no explicit LLM timeout (SDK default 600s), and the DB session is held during the call. |
+| 3 | Duplicate creates | **Fixed for clients that send a key** (M3); the frontend does. 20 concurrent keyed creates gave 1 record on Postgres (M6). Keyless requests still duplicate, by design. |
+| 4 | `PATCH null` returns 500 | **Fixed** (M4), now 422. |
+| 5 | Weak validation | **Fixed** for applications and resume names (M4). Resume *content* is still unbounded, deliberately: the same schema is the LLM's output schema. |
+| 6 | Inconsistent errors | **Fixed** (M4): `{detail, code}` everywhere. |
+| 7 | Two default resumes | **Open.** |
+| 8 | API key fails open, `!=` compare | **Half fixed.** Constant-time compare (M5). Still fails open if `API_KEY` is unset. |
+| 9 | Upload size checked after receipt | **Open.** |
+| 10 | Missing indexes | **Fixed for `tailored_resumes.application_id`** (M6, measured). `applications.status` and `updated_at` not indexed; not measured to matter. |
+| 11 | No pagination | **Open.** The full board list is now the slowest endpoint in the M6 load test. |
+| 12 | No migrations | **Open, and now concrete.** The M3 table is created automatically, but the M6 index needs a manual `CREATE INDEX` on existing databases. |
+| 13 | Rotate the API key | **Open.** Your action. |
+| 14 | Test gaps | **Fixed** (M2 to M6): 55 tests became 104 backend tests. |
+
 ## Mapping to the planned milestones
 
 | Milestone | Addresses |

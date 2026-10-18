@@ -164,6 +164,18 @@ CREATE INDEX ix_tailored_resumes_application_id ON tailored_resumes (application
 
 **Not applied.** Nothing was deployed.
 
-**Live deployment.** No performance numbers exist. The app was never load
+## Milestone 7: final check
+
+On branch `harden/milestone-7-docs`, same machine:
+
+- Backend, `pytest`: `104 passed in 0.47s`.
+- Frontend:
+  - `npm test`: `10 passed`
+  - `npm run lint`: 0 problems
+  - `npm run build`: compiled successfully
+  - `npx playwright test`: `1 passed`
+
+**Live deployment.** No performance numbers exist. All the hardening was
+tested locally only and has never served real traffic. The app was never load
 tested, and no latency or traffic was measured. Load testing is milestone 6
 and will run **locally only**.

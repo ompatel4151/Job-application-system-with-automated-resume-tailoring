@@ -47,4 +47,4 @@ print("6. 2,000,000-char job_description ->", r.status_code)
 
 print("7. error body shapes:")
 print("   404:", c.get("/api/applications/99999").json())
-print("   422:", type(c.post("/api/applications", json={}).json()["detail"]).__name__, "(list, not string)")
+print("   422 detail type:", type(c.post("/api/applications", json={}).json()["detail"]).__name__)

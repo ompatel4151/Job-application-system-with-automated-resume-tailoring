@@ -173,11 +173,18 @@ npm test          # Vitest unit tests
 npm run test:e2e  # Playwright smoke test
 ```
 
-The backend suite covers the application pipeline, resume management (including
-single-default enforcement), the upload and tailoring flows with the model call
-mocked, the API-key gate, and the Markdown renderer. The frontend tests cover
-the status config, the API client, and the board rendering. CI runs all of
-these on every pull request.
+The backend suite covers:
+
+- the application pipeline and resume management (including the single
+  default resume)
+- the upload and tailoring flows, with the model call mocked
+- the API-key gate and the Markdown renderer
+- contract tests that pin response shapes and status codes
+- idempotency, input validation and rate limiting
+
+The frontend tests cover the status config, the API client (including the
+`Idempotency-Key` header) and the board rendering. CI runs all of these on
+every pull request.
 
 ## API overview
 
@@ -192,6 +199,70 @@ these on every pull request.
 | `POST` | `/api/applications/{id}/tailor` | Generate a tailored resume |
 | `GET` | `/api/applications/{id}/tailored` | List tailored versions |
 | `GET` | `/api/tailored/{id}/markdown` | Download as Markdown |
+
+## Reliability and safety
+
+These were added in a hardening pass. [AUDIT.md](AUDIT.md) lists every
+weakness found and its status, and [RESULTS.md](RESULTS.md) has the
+measurements. All of it was tested **locally only**; none of it has run
+against real traffic.
+
+**Retries are safe.** `POST /api/applications`, `POST /api/resumes` and the
+tailor endpoint accept an optional `Idempotency-Key` header.
+
+- The first request with a key does the work and stores the response.
+- A retry with the same key gets that stored response back, marked
+  `Idempotent-Replayed: true`, instead of creating a duplicate or paying for
+  a second LLM call.
+- Reusing a key for a different request returns 422.
+- The key is a primary key, so even concurrent duplicates create exactly one
+  record (checked with 20 concurrent requests against Postgres).
+- The frontend sends a key with each create and reuses it on retry.
+
+**Bad input is rejected early.** Names must be non-empty and at most 200
+characters, matching the database columns. Job links must be `http(s)`. Job
+descriptions are capped at 20,000 characters, since they're sent to the LLM.
+Every error has the same shape:
+
+```json
+{"detail": "company: String should have at least 1 character", "code": "validation_error",
+ "errors": [{"field": "company", "message": "String should have at least 1 character"}]}
+```
+
+`detail` is always a readable string and `code` is machine-readable. Only
+422s include `errors`. Unexpected failures return a generic 500 and are
+logged; internals aren't sent to the client.
+
+**Requests are rate-limited** per client with token buckets: 5 per minute
+for the two LLM endpoints and 60 per minute for everything else, in separate
+buckets. Over the limit you get a 429 with `Retry-After`.
+
+- Behind the frontend proxy, set `TRUST_FORWARDED_FOR=true` so each visitor
+  is limited separately. The forwarded IP is only trusted on requests that
+  carry the API key.
+- Limits live in memory, so they are per server process and reset on
+  restart.
+
+**Indexed for the detail page.** `tailored_resumes.application_id` is
+indexed. Postgres doesn't index foreign keys on its own.
+
+- In a local load test on a synthetic 200,000-row dataset, throughput went
+  from about 170 to about 230 requests/s.
+- That's one machine, with client and server sharing the CPU. Full setup and
+  every run are in RESULTS.md.
+- Reproduce it with `scripts/seed_load.py` and `scripts/loadtest.py`.
+- `create_all` doesn't add indexes to an existing database, so an existing
+  database needs the `CREATE INDEX` statement from RESULTS.md.
+
+**Known limitations.**
+
+- There are no user accounts. Anyone who can load the frontend can use the
+  whole API through its proxy (AUDIT #1). Rate limiting reduces the damage;
+  real auth is the fix.
+- Rate limits aren't shared across servers.
+- There are no schema migrations.
+- List endpoints aren't paginated. The full board list is now the slowest
+  endpoint in the load test.
 
 ## Deployment
 
