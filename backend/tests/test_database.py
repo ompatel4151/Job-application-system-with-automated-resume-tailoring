@@ -18,3 +18,11 @@ def test_normalize_only_rewrites_the_scheme():
     """A password containing the literal string must not be mangled."""
     url = "postgres://user:postgres://@host:5432/db"
     assert _normalize(url) == "postgresql://user:postgres://@host:5432/db"
+
+
+def test_tailored_resumes_are_indexed_by_application():
+    """Milestone 6: without this index, each detail page scanned the whole table."""
+    from app.models import TailoredResume
+
+    indexed = {col.name for idx in TailoredResume.__table__.indexes for col in idx.columns}
+    assert "application_id" in indexed

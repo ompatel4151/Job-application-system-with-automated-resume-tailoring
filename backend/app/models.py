@@ -65,8 +65,11 @@ class TailoredResume(Base):
     __tablename__ = "tailored_resumes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Indexed: Postgres doesn't index foreign keys on its own, and the detail
+    # page and tailored list look rows up by application. Without it, each
+    # lookup scanned the whole table (measured in RESULTS.md, milestone 6).
     application_id: Mapped[int] = mapped_column(
-        ForeignKey("applications.id", ondelete="CASCADE"), nullable=False
+        ForeignKey("applications.id", ondelete="CASCADE"), nullable=False, index=True
     )
     resume_id: Mapped[int] = mapped_column(
         ForeignKey("resumes.id", ondelete="CASCADE"), nullable=False
