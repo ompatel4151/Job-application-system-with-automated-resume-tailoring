@@ -23,6 +23,11 @@ async function proxy(req: NextRequest, path: string[]): Promise<Response> {
   // Lets the backend recognize a retried create (see backend/app/idempotency.py).
   const idempotencyKey = req.headers.get("idempotency-key");
   if (idempotencyKey) headers.set("idempotency-key", idempotencyKey);
+  // Pass the visitor's IP on, so the backend can rate-limit each visitor
+  // separately instead of treating all traffic as coming from this server.
+  // The backend only trusts it when TRUST_FORWARDED_FOR is on and the key matches.
+  const forwardedFor = req.headers.get("x-forwarded-for");
+  if (forwardedFor) headers.set("x-forwarded-for", forwardedFor);
   if (API_KEY) headers.set("x-api-key", API_KEY);
 
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
