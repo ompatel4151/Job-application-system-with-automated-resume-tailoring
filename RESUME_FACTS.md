@@ -128,3 +128,13 @@ Not measured:
 - Redis-backed rate limiting under load. Redis was off in these runs, the
   same as before.
 - Any live or AWS latency.
+
+## Item 6: AWS (Terraform), on hold
+
+| Fact | Where | How |
+|---|---|---|
+| The Terraform config is formatted and valid against AWS provider v5.100.0. | local | `terraform fmt -check` and `terraform validate` (Terraform 1.9.8 in Docker) |
+
+**Not done, so nothing to claim yet:** no `plan` against a real account, no
+`apply`, no running service, no AWS latency or cost. The ~$40/month figure in
+infra/README.md is an estimate from public price lists, not a bill.

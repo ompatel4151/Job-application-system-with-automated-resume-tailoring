@@ -69,7 +69,8 @@ frontend/                # Next.js App Router (TypeScript, Tailwind, shadcn/ui)
 ├── e2e/                 # Playwright smoke tests
 └── Dockerfile
 docker-compose.yml       # db + backend + frontend for local dev
-.github/workflows/       # CI (tests)
+.github/workflows/       # CI (tests, Terraform checks), AWS deploy (off until set up)
+infra/                   # Terraform for AWS (validated, not applied)
 ```
 
 **Backend:** Python 3.11 · FastAPI · SQLAlchemy 2.0 · Pydantic v2 · SQLite or
@@ -331,6 +332,11 @@ the same retry as before for a database that is still waking up.
 
 **Known limitations.**
 
+- The backend runs only on Render. The AWS Terraform is validated but has
+  never been applied, so nothing about it has been tested against real AWS.
+- One instance with no autoscaling, on Render's free tier, which sleeps when
+  idle.
+
 - Nothing scrapes `/metrics` on a schedule, so there are no dashboards or
   alerts yet. A free hosted Prometheus (such as Grafana Cloud's free tier)
   could scrape it.
@@ -363,6 +369,15 @@ then import the repo on Vercel with Root Directory `frontend` and set
 `BACKEND_URL` to the Render URL and `BACKEND_API_KEY` to the same value as the
 backend's `API_KEY`. [TEARDOWN.md](TEARDOWN.md) covers removal and cost (free,
 so $0). The earlier single-service setup is in [DEPLOY.md](DEPLOY.md).
+
+**AWS (written, not deployed).** [`infra/`](infra/) has Terraform for the
+backend on AWS: ECR, ECS Fargate, an HTTPS load balancer, CloudWatch logs,
+Secrets Manager, and a GitHub OIDC deploy role. A budget alert gets applied
+first. [`deploy-aws.yml`](.github/workflows/deploy-aws.yml) builds, pushes and
+rolls out on merge once it's turned on. CI checks the Terraform with
+`fmt` and `validate`. It has **never been applied**, because it costs about
+$40 a month; [infra/README.md](infra/README.md) has the estimate, free
+alternatives and the steps.
 
 ## Roadmap
 

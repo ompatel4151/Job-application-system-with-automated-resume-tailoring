@@ -1,6 +1,7 @@
 # Plan: closing the 6 known limits
 
-Status: **approved 2026-10-18, all recommended options.** Paid items are on
+Status: **approved 2026-10-18, all recommended options. Items 1 to 5 built
+on branches; item 6 written and validated, not applied.** Paid items are on
 hold (the AWS deploy and a domain); free alternatives are listed under item 6.
 
 Changes from the draft, found while building:
