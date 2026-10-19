@@ -146,6 +146,13 @@ class MatchAnalysis(BaseModel):
     matched_keywords: list[str] = []
     missing_keywords: list[str] = []
     recommendations: list[str] = []
+    # Exact terms from the posting that an ATS would search for (skills, tools,
+    # short phrases), used by the word-for-word ATS check. Empty on resumes
+    # tailored before this existed.
+    ats_keywords: list[str] = Field(
+        default=[],
+        description="8-20 short terms copied word for word from the job description",
+    )
 
 
 class TailorRequest(BaseModel):
@@ -203,6 +210,8 @@ class AtsCheck(BaseModel):
     detail: str
     # What's absent, for the checks where that's a list (keywords, headings).
     missing: list[str] = []
+    # What's present, for the keyword check.
+    found: list[str] = []
 
 
 class AtsReport(BaseModel):

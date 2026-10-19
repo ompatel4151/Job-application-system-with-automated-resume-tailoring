@@ -1208,6 +1208,14 @@
             "type": "array",
             "title": "Missing",
             "default": []
+          },
+          "found": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Found",
+            "default": []
           }
         },
         "type": "object",
@@ -1361,6 +1369,15 @@
             },
             "type": "array",
             "title": "Recommendations",
+            "default": []
+          },
+          "ats_keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Ats Keywords",
+            "description": "8-20 short terms copied word for word from the job description",
             "default": []
           }
         },

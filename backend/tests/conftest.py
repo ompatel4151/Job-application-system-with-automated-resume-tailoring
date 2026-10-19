@@ -125,6 +125,7 @@ def fake_tailoring(monkeypatch, sample_resume_content):
                 matched_keywords=["Python", "FastAPI"],
                 missing_keywords=["Kubernetes"],
                 recommendations=["Highlight the Job Tracker project."],
+                ats_keywords=["Python", "FastAPI", "Go"],
             ),
         )
 

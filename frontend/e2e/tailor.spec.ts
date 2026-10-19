@@ -29,7 +29,7 @@ test("a tailored resume offers a PDF and shows the ATS check apart from the AI s
         score: 82,
         checks: [
           { name: "parse", label: "Text reads back from the PDF", passed: true, points: 25, max_points: 25, detail: "All text reads back from the PDF (5 sections).", missing: [] },
-          { name: "keywords", label: "Job keywords", passed: false, points: 23, max_points: 35, detail: "2 of 3 keywords from the job are in the resume.", missing: ["Kubernetes"] },
+          { name: "keywords", label: "Job keywords (word for word)", passed: false, points: 23, max_points: 35, detail: "2 of 3 terms from the job posting appear word for word.", missing: ["Kubernetes"], found: ["Python", "PostgreSQL"] },
         ],
       },
     }),
@@ -41,7 +41,9 @@ test("a tailored resume offers a PDF and shows the ATS check apart from the AI s
   await expect(page.getByRole("link", { name: "Download PDF" })).toHaveAttribute("href", "/api/tailored/42/pdf");
   await expect(page.getByRole("heading", { name: "ATS check" })).toBeVisible();
   await expect(page.getByText("82/100")).toBeVisible();
+  await expect(page.getByText("Found: Python, PostgreSQL")).toBeVisible();
   await expect(page.getByText("Missing: Kubernetes")).toBeVisible();
+  await expect(page.getByText("AI: matched in meaning (1)")).toBeVisible();
   // The AI score is still there, labelled as a different thing.
   await expect(page.getByText(/AI match score/)).toBeVisible();
 });

@@ -1,8 +1,8 @@
 """The rule-based ATS check: the same answer every time, a reason for every
 point lost, and no LLM call."""
 
-from app.schemas import ResumeContent
-from app.services.ats import ats_check
+from app.schemas import MatchAnalysis, ResumeContent
+from app.services.ats import ats_check, job_keywords
 from tests.tokens import USER_B, auth_header
 
 STRONG = {
@@ -49,6 +49,36 @@ def test_missing_keywords_are_named_and_cost_points():
     assert keywords.missing == ["Kubernetes", "Kafka"]
     assert keywords.points == round(35 * 3 / 5)
     assert "3 of 5" in keywords.detail
+
+
+def test_found_keywords_are_listed_too():
+    keywords = _check("keywords", ats_check(ResumeContent.model_validate(STRONG), [*KEYWORDS, "Kafka"]))
+
+    assert keywords.found == KEYWORDS
+    assert keywords.missing == ["Kafka"]
+    assert "word for word" in keywords.label
+
+
+def test_unicode_hyphens_match_plain_ones():
+    """Seen live: "full‑stack" (U+2011) in the resume vs "full-stack" in the job."""
+    content = ResumeContent.model_validate({**STRONG, "summary": "Full\u2011stack engineer."})
+
+    assert _check("keywords", ats_check(content, ["full-stack"])).found == ["full-stack"]
+
+
+def test_job_keywords_keep_only_terms_that_are_really_in_the_posting():
+    """The AI is asked to copy terms from the posting; anything it paraphrased
+    or invented is dropped instead of counted."""
+    analysis = MatchAnalysis(match_score=70, ats_keywords=["Python", "REST APIs", "distributed systems", "python"])
+    posting = "We use Python to build REST APIs at scale."
+
+    assert job_keywords(analysis, posting) == ["Python", "REST APIs"]
+
+
+def test_job_keywords_fall_back_for_resumes_tailored_before_this_existed():
+    analysis = MatchAnalysis(match_score=70, matched_keywords=["Python"], missing_keywords=["Kafka"])
+
+    assert job_keywords(analysis, "Python and Kafka") == ["Python", "Kafka"]
 
 
 def test_keywords_match_whole_words_case_insensitively():
@@ -133,8 +163,11 @@ def test_ats_endpoint(client, make_application, make_resume, fake_tailoring):
     assert {c["name"] for c in body["checks"]} == {
         "parse", "headings", "contact", "keywords", "numbers", "length",
     }
-    # The fake match analysis says the job wants Python, FastAPI and Kubernetes.
-    assert _missing(body, "keywords") == ["Kubernetes"]
+    # The fake analysis lists Python, FastAPI and Go as ATS keywords; the job
+    # description only says Python and FastAPI, so Go is dropped, not counted.
+    keywords = next(c for c in body["checks"] if c["name"] == "keywords")
+    assert keywords["found"] == ["Python", "FastAPI"]
+    assert keywords["missing"] == []
     assert client.get(f"/api/tailored/{tailored['id']}/ats", headers=auth_header(USER_B)).status_code == 404
 
 

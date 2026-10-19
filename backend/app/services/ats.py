@@ -15,7 +15,7 @@ import re
 
 from pypdf import PdfReader
 
-from app.schemas import AtsCheck, AtsReport, ResumeContent
+from app.schemas import AtsCheck, AtsReport, MatchAnalysis, ResumeContent
 from app.services.pdf import latin1, render_pdf
 
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
@@ -105,25 +105,46 @@ def _contact_check(content: ResumeContent) -> AtsCheck:
     )
 
 
+def _contains(text: str, term: str) -> bool:
+    """Whole-word and case-insensitive, after the same character cleanup the
+    PDF gets, so "full‑stack" (U+2011) matches "full-stack" and "Go" doesn't
+    match inside "Google"."""
+    return re.search(rf"(?<!\w){re.escape(latin1(term))}(?!\w)", latin1(text), re.IGNORECASE) is not None
+
+
+def job_keywords(analysis: MatchAnalysis, job_description: str) -> list[str]:
+    """The terms to check the resume for, word for word.
+
+    Uses the AI's ats_keywords, but only those that really appear in the job
+    description: anything it paraphrased or made up is dropped, not counted.
+    Resumes tailored before ats_keywords existed fall back to the matched and
+    missing keyword lists.
+    """
+    seen, terms = set(), []
+    for term in analysis.ats_keywords:
+        key = latin1(term).strip().lower()
+        if key and key not in seen and _contains(job_description, term):
+            seen.add(key)
+            terms.append(term.strip())
+    return terms or analysis.matched_keywords + analysis.missing_keywords
+
+
 def _keywords_check(content: ResumeContent, keywords: list[str]) -> AtsCheck:
-    """Whole-word, case-insensitive: "Go" doesn't match inside "Google"."""
     text = _all_text(content)
     keywords = list(dict.fromkeys(k for k in keywords if k.strip()))  # dedupe, keep order
+    label = "Job keywords (word for word)"
     if not keywords:
         return AtsCheck(
-            name="keywords", label="Job keywords", passed=True, points=35, max_points=35,
+            name="keywords", label=label, passed=True, points=35, max_points=35,
             detail="No job keywords to check against.",
         )
-    missing = [
-        k for k in keywords
-        if not re.search(rf"(?<!\w){re.escape(k)}(?!\w)", text, re.IGNORECASE)
-    ]
-    found = len(keywords) - len(missing)
+    found = [k for k in keywords if _contains(text, k)]
+    missing = [k for k in keywords if k not in found]
     return AtsCheck(
-        name="keywords", label="Job keywords", passed=not missing,
-        points=round(35 * found / len(keywords)), max_points=35,
-        detail=f"{found} of {len(keywords)} keywords from the job are in the resume.",
-        missing=missing,
+        name="keywords", label=label, passed=not missing,
+        points=round(35 * len(found) / len(keywords)), max_points=35,
+        detail=f"{len(found)} of {len(keywords)} terms from the job posting appear word for word.",
+        missing=missing, found=found,
     )
 
 

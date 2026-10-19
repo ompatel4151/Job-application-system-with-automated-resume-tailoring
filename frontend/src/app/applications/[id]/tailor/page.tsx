@@ -153,13 +153,13 @@ function TailorResult({ result }: { result: TailoredResumeOut }) {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <KeywordList
-          title="Matched"
+          title="AI: matched in meaning"
           words={m.matched_keywords}
           className="text-emerald-700 dark:text-emerald-300"
           empty="No strong matches found."
         />
         <KeywordList
-          title="Missing"
+          title="AI: missing in meaning"
           words={m.missing_keywords}
           className="text-rose-700 dark:text-rose-300"
           empty="Nothing important missing."
@@ -252,7 +252,9 @@ function AtsPanel({ tailoredId }: { tailoredId: number }) {
         </span>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
-        Rule-based checks on the PDF above: the same answer every time, no AI.
+        Rule-based checks on the PDF above: the same answer every time. Keywords
+        here must appear word for word, the way ATS software searches; the AI
+        lists below judge meaning, so their counts can differ.
         Real ATS software doesn&apos;t publish a score, so this checks what
         commonly trips it up rather than predicting a result.
       </p>
@@ -268,6 +270,11 @@ function AtsPanel({ tailoredId }: { tailoredId: number }) {
             <span className="flex-1">
               <span className="font-medium">{c.label}</span>{" "}
               <span className="text-muted-foreground">{c.detail}</span>
+              {c.found && c.found.length > 0 ? (
+                <span className="block text-xs text-muted-foreground">
+                  Found: {c.found.join(", ")}
+                </span>
+              ) : null}
               {!c.passed && c.missing && c.missing.length > 0 ? (
                 <span className="block text-xs text-muted-foreground">
                   Missing: {c.missing.join(", ")}

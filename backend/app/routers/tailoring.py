@@ -147,5 +147,5 @@ def ats_report(tailored_id: int, user: CurrentUser, db: Session = Depends(get_db
     analysis = MatchAnalysis.model_validate(tailored.match_analysis)
     return ats.ats_check(
         ResumeContent.model_validate(tailored.content),
-        analysis.matched_keywords + analysis.missing_keywords,
+        ats.job_keywords(analysis, tailored.application.job_description or ""),
     )

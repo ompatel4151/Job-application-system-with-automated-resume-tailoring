@@ -348,6 +348,11 @@ export interface components {
              * @default []
              */
             missing: string[];
+            /**
+             * Found
+             * @default []
+             */
+            found: string[];
         };
         /**
          * AtsReport
@@ -428,6 +433,12 @@ export interface components {
              * @default []
              */
             recommendations: string[];
+            /**
+             * Ats Keywords
+             * @description 8-20 short terms copied word for word from the job description
+             * @default []
+             */
+            ats_keywords: string[];
         };
         /** PipelineStats */
         PipelineStats: {

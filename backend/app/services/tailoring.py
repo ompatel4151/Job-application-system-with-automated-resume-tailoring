@@ -43,7 +43,13 @@ Rules:
   the candidate genuinely has; missing_keywords are important requirements the
   candidate lacks or hasn't demonstrated; recommendations are concrete actions
   (things to learn, projects to highlight, points to address in a cover
-  letter). Score fit honestly on a 0-100 scale.
+  letter). Score fit honestly on a 0-100 scale. matched_keywords and
+  missing_keywords may be phrases that describe meaning.
+- ats_keywords are different: 8-20 terms an applicant tracking system would
+  search for, copied exactly as written in the job description (same spelling
+  and wording): hard skills, tools, technologies, certifications, and short
+  role phrases of 1-3 words. Don't paraphrase, summarize or add terms that
+  aren't in the job description.
 """
 
 
