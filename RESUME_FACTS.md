@@ -73,3 +73,58 @@ Not measured: latency added per request against a hosted Redis (Upstash).
 
 Not measured: overhead added by the logging and metrics per request (see the
 load-test re-run at the end). Nothing scrapes the metrics yet.
+
+## Load test re-run (local only), old code vs new code
+
+Same machine and setup as milestone 6 in RESULTS.md:
+
+- Apple M4, 16 GB, macOS 27.0.1, PostgreSQL 16.15 in Docker.
+- 1 uvicorn process, `RATE_LIMIT_ENABLED=false`.
+- Synthetic data: 2,000 applications and 200,000 tailored resumes.
+- 20 concurrent clients, 4,000 requests after a 200-request warmup.
+- The load generator runs on the same machine.
+
+Old = `main` at `15008c7`. New = the end of item 5. Both ran in the same
+session, against their own copy of the same seeded data. New requests carry a
+real ES256 token, verified against a local JWKS (`scripts/dev_jwks.py`),
+with RLS on. All runs are shown; none were dropped.
+
+**Full request mix** (50% detail, 25% tailored list, 15% stats, 10% board list):
+
+| Run | Throughput | p50 | p95 | p99 | Errors |
+|---|---|---|---|---|---|
+| Old, run 1 | 232 req/s | 85.9 ms | 167.0 ms | 197.5 ms | 0% |
+| Old, run 2 | 232 req/s | 86.7 ms | 165.0 ms | 188.3 ms | 0% |
+| New, run 1 | 574 req/s | 29.2 ms | 72.5 ms | 149.3 ms | 0% |
+| New, run 2 | 597 req/s | 29.9 ms | 65.8 ms | 72.9 ms | 0% |
+
+**This is not the same workload.** In the new code the board list returns 50
+rows instead of all 2,000, and the tailored list returns 50 instead of 100.
+The server is saturated (p50 is close to 20 ÷ throughput, by Little's law),
+so cheaper list responses shorten the queue for every endpoint. Don't quote
+this as "2.5x faster". It is the effect of pagination on this mix.
+
+**Single-row endpoints only** (`--no-lists`: detail and stats, which
+pagination didn't change), both run with `--no-access-log`. This isolates the
+per-request cost of auth, RLS, JSON logging and metrics:
+
+| Run | Throughput | p50 | p95 | p99 |
+|---|---|---|---|---|
+| Old, run 1 | 552 req/s | 20.2 ms | 110.8 ms | 178.1 ms |
+| Old, run 2 | 548 req/s | 20.8 ms | 108.9 ms | 174.4 ms |
+| New, run 1 | 602 req/s | 23.1 ms | 102.2 ms | 172.9 ms |
+| New, run 2 | 544 req/s | 20.7 ms | 115.7 ms | 179.6 ms |
+
+The difference is within the run-to-run spread (544 to 602 req/s for the
+same code). With 2 runs each, the honest conclusion is "no overhead
+measurable on this setup", not "no overhead".
+
+Commands: `scripts/seed_load.py`, `scripts/dev_jwks.py`, then
+`scripts/loadtest.py --requests 4000 --concurrency 20 --token "$TOKEN"`,
+optionally with `--no-lists`.
+
+Not measured:
+
+- Redis-backed rate limiting under load. Redis was off in these runs, the
+  same as before.
+- Any live or AWS latency.

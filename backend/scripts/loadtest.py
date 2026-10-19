@@ -7,8 +7,10 @@ It measures one machine: the load generator, the API server and the database
 (in Docker) all share the same CPU, so the absolute numbers are only
 comparable to other runs on the same setup.
 
+Every request sends --token as a bearer token (see scripts/dev_jwks.py).
+
 Usage (from backend/, with the API running on :8000):
-  ../.venv/bin/python scripts/loadtest.py --requests 4000 --concurrency 20
+  ../.venv/bin/python scripts/loadtest.py --requests 4000 --concurrency 20 --token "$TOKEN"
 """
 
 import argparse
@@ -33,22 +35,26 @@ MIX = [
 ]
 
 
+LIST_LABELS = {"GET /api/applications/{id}/tailored", "GET /api/applications"}
+
+
 def percentiles(ms: list[float]) -> tuple[float, float, float]:
     q = statistics.quantiles(ms, n=100)  # 99 cut points
     return q[49], q[94], q[98]
 
 
-async def run(base: str, total: int, concurrency: int, seed: int):
+async def run(base: str, total: int, concurrency: int, seed: int, token: str | None, mix=MIX):
     results: list[tuple[str, float, int]] = []  # (label, ms, status; 0 = exception)
     remaining = total
-    labels = [m[0] for m in MIX]
-    weights = [m[1] for m in MIX]
-    builders = {m[0]: m[2] for m in MIX}
+    labels = [m[0] for m in mix]
+    weights = [m[1] for m in mix]
+    builders = {m[0]: m[2] for m in mix}
 
     async with httpx.AsyncClient(
         base_url=base,
         timeout=30,
         limits=httpx.Limits(max_connections=concurrency),
+        headers={"Authorization": f"Bearer {token}"} if token else None,
     ) as client:
 
         async def worker(worker_id: int):
@@ -71,7 +77,7 @@ async def run(base: str, total: int, concurrency: int, seed: int):
     return results, elapsed
 
 
-def report(results, elapsed):
+def report(results, elapsed, mix=MIX):
     def row(name, rows):
         ms = [r[1] for r in rows]
         errors = sum(1 for r in rows if r[2] == 0 or r[2] >= 400)
@@ -86,7 +92,7 @@ def report(results, elapsed):
     by_label = defaultdict(list)
     for r in results:
         by_label[r[0]].append(r)
-    for label, *_ in MIX:
+    for label, *_ in mix:
         print(row(label, by_label[label]))
 
 
@@ -97,12 +103,17 @@ def main():
     p.add_argument("--concurrency", type=int, default=20)
     p.add_argument("--warmup", type=int, default=200)
     p.add_argument("--seed", type=int, default=1)
+    p.add_argument("--token", help="bearer token; required since accounts were added")
+    # Only the single-row endpoints, whose response size pagination didn't
+    # change: isolates per-request overhead (auth, RLS, logging).
+    p.add_argument("--no-lists", action="store_true")
     a = p.parse_args()
 
-    asyncio.run(run(a.base, a.warmup, a.concurrency, seed=99))  # not recorded
-    results, elapsed = asyncio.run(run(a.base, a.requests, a.concurrency, a.seed))
+    mix = [m for m in MIX if not (a.no_lists and m[0] in LIST_LABELS)]
+    asyncio.run(run(a.base, a.warmup, a.concurrency, 99, a.token, mix))  # not recorded
+    results, elapsed = asyncio.run(run(a.base, a.requests, a.concurrency, a.seed, a.token, mix))
     print(f"Concurrency: {a.concurrency}, warmup: {a.warmup} requests (not counted)")
-    report(results, elapsed)
+    report(results, elapsed, mix)
 
 
 if __name__ == "__main__":
