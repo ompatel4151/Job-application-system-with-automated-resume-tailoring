@@ -5,6 +5,7 @@
 import { listPath } from "./pages";
 import type {
   ApplicationCreate,
+  ResumeContent,
   ApplicationOut,
   ApplicationPage,
   ApplicationStatus,
@@ -28,9 +29,15 @@ export class ApiError extends Error {
 }
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
+  // A file upload (FormData) needs the browser to set its own multipart
+  // Content-Type, boundary included; everything else is JSON.
+  const json = !(init?.body instanceof FormData);
   const res = await fetch(`/api${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers: {
+      ...(json ? { "Content-Type": "application/json" } : {}),
+      ...(init?.headers ?? {}),
+    },
     cache: "no-store",
   });
 
@@ -87,6 +94,13 @@ export const api = {
   // Resumes
   listResumes: (cursor?: string) =>
     http<ResumePage>(listPath("/resumes", { cursor })),
+  // Reads a PDF or image into resume content. Saves nothing: the user reviews
+  // the result first.
+  parseResume: (file: File) => {
+    const body = new FormData();
+    body.append("file", file);
+    return http<ResumeContent>(`/resumes/parse`, { method: "POST", body });
+  },
   createResume: (body: ResumeCreate, idempotencyKey?: string) =>
     http<ResumeOut>(`/resumes`, {
       method: "POST",

@@ -63,4 +63,18 @@ describe("api client", () => {
   it("exposes ApiError as an Error subclass", () => {
     expect(new ApiError("x", 400)).toBeInstanceOf(Error);
   });
+
+  it("uploads a resume file as multipart, not JSON", async () => {
+    const spy = mockFetch(200, { full_name: "Om" });
+    const file = new File(["%PDF-1.4"], "resume.pdf", { type: "application/pdf" });
+
+    await expect(api.parseResume(file)).resolves.toEqual({ full_name: "Om" });
+
+    const init = spy.mock.calls[0][1] as RequestInit;
+    expect(spy.mock.calls[0][0]).toBe("/api/resumes/parse");
+    expect(init.body).toBeInstanceOf(FormData);
+    expect((init.body as FormData).get("file")).toBe(file);
+    // The browser must set multipart/form-data with its boundary itself.
+    expect((init.headers as Record<string, string>)["Content-Type"]).toBeUndefined();
+  });
 });

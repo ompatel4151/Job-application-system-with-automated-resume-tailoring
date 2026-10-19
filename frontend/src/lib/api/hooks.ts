@@ -125,6 +125,10 @@ export function useCreateResume() {
   });
 }
 
+export function useParseResume() {
+  return useMutation({ mutationFn: (file: File) => api.parseResume(file) });
+}
+
 export function useTailor() {
   const qc = useQueryClient();
   const invalidate = useInvalidateApplications();
