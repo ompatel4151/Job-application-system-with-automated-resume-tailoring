@@ -138,3 +138,15 @@ Not measured:
 **Not done, so nothing to claim yet:** no `plan` against a real account, no
 `apply`, no running service, no AWS latency or cost. The ~$40/month figure in
 infra/README.md is an estimate from public price lists, not a bill.
+
+## Live deploy of items 1 to 5 (2026-10-19, main at `a3537a3`)
+
+| Fact | Where | How |
+|---|---|---|
+| CI passed on `main`, including the Postgres, Redis and Terraform jobs. The AWS deploy workflow was skipped, as designed. | GitHub Actions | `gh run list --branch main` |
+| The live database migrated itself on deploy: it is at revision `0002`, all 4 tables have `user_id`, and each has the `own_rows` policy. No manual steps. | live Supabase (read-only query) | `alembic_version`, `pg_policies`, `information_schema.columns` |
+| Signed out, the live site redirects `/` to `/login` (307), and the API through the site returns 401 "Sign in to continue." | live | `curl` |
+| The backend called directly, without the proxy's key, returns 401 "Invalid or missing API key." | live | `curl` |
+
+Not yet verified live: a real sign-up, sign-in and use of the app (needs your
+account), and shared rate limits (only if `REDIS_URL` is set on Render).
