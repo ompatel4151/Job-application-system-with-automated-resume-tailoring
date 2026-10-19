@@ -48,10 +48,12 @@ export default async function LoginPage(props: PageProps<"/login">) {
           />
         </div>
         <div className="flex gap-2">
-          <Button formAction={signIn} className="flex-1">
+          {/* type="submit" is required: Base UI's Button defaults to
+              type="button", which never submits the form. */}
+          <Button type="submit" formAction={signIn} className="flex-1">
             Sign in
           </Button>
-          <Button formAction={signUp} variant="outline" className="flex-1">
+          <Button type="submit" formAction={signUp} variant="outline" className="flex-1">
             Create account
           </Button>
         </div>

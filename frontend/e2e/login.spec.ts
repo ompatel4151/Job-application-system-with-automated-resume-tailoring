@@ -14,5 +14,18 @@ test("sign-in page offers sign in and account creation", async ({ page }) => {
 test("errors from a failed sign-in are shown", async ({ page }) => {
   await page.goto("/login?error=Invalid%20login%20credentials");
 
-  await expect(page.getByRole("alert")).toHaveText("Invalid login credentials");
+  // Filtered: Next.js adds its own empty role="alert" route announcer.
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Invalid login credentials" }),
+  ).toBeVisible();
+});
+
+test("both buttons actually submit the form", async ({ page }) => {
+  // Base UI's Button defaults to type="button", which does nothing in a form.
+  // Live, "Create account" silently did nothing until this was fixed.
+  await page.goto("/login");
+
+  for (const name of ["Sign in", "Create account"]) {
+    await expect(page.getByRole("button", { name })).toHaveAttribute("type", "submit");
+  }
 });
