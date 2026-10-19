@@ -33,6 +33,8 @@ test("an uploaded resume fills the form, shows a readable review, and saves it a
     route.fulfill({ json: { total: 0, by_status: {} } }),
   );
 
+  // Short window, like a laptop: the saved list is off-screen at the Save button.
+  await page.setViewportSize({ width: 1280, height: 420 });
   await page.goto("/resumes");
   await page.getByLabel("Upload your resume").setInputFiles({
     name: "resume.pdf",
@@ -55,8 +57,12 @@ test("an uploaded resume fills the form, shows a readable review, and saves it a
   expect(content.experience[0].company).toBe("Acme");
   expect(content.education[0].school).toBe("Penn State");
 
-  // And it shows up in the saved list without a reload.
-  await expect(page.getByRole("listitem").filter({ hasText: "default" })).toBeVisible();
+  // And it shows up in the saved list without a reload, scrolled into view and
+  // highlighted (the list is above the form, where you can't see it otherwise).
+  const savedItem = page.getByRole("listitem").filter({ hasText: "default" });
+  await expect(savedItem).toBeVisible();
+  await expect(savedItem).toBeInViewport();
+  await expect(savedItem).toHaveAttribute("data-just-saved", "true");
   await expect(page.getByText("No resumes yet")).toHaveCount(0);
 });
 

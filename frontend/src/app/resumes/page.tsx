@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadMore } from "@/components/load-more";
+import { cn } from "@/lib/utils";
 
 // The backend accepts 10 MB, but Vercel won't pass a request body over about
 // 4.5 MB to the proxy, so stop larger files here with a clear message.
@@ -35,6 +36,10 @@ export default function ResumesPage() {
   const [parsed, setParsed] = useState<ResumeContent | null>(null);
   // Changing the key remounts the form, so its fields pick up new defaults.
   const [formKey, setFormKey] = useState(0);
+  // The list is above the form, out of view when you press Save. After a
+  // save, scroll up to it and briefly highlight the new resume.
+  const savedListRef = useRef<HTMLElement>(null);
+  const [justSavedId, setJustSavedId] = useState<number | null>(null);
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -90,8 +95,11 @@ export default function ResumesPage() {
     create.mutate(
       { body: { name, is_default: true, content }, idempotencyKey },
       {
-        onSuccess: () => {
+        onSuccess: (resume) => {
           toast.success("Base resume saved");
+          setJustSavedId(resume.id);
+          setTimeout(() => setJustSavedId(null), 3000);
+          savedListRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
           setParsed(null);
           setFormKey((k) => k + 1);
           setAdvancedOpen(false);
@@ -115,7 +123,7 @@ export default function ResumesPage() {
         Your default base resume is what tailoring rewrites for each job.
       </p>
 
-      <section className="mt-6">
+      <section ref={savedListRef} className="mt-6 scroll-mt-20">
         <h2 className="mb-2 text-sm font-medium text-muted-foreground">
           Saved resumes
         </h2>
@@ -134,7 +142,11 @@ export default function ResumesPage() {
             {resumes.map((r) => (
               <li
                 key={r.id}
-                className="flex items-center justify-between rounded-lg border p-3 text-sm"
+                data-just-saved={r.id === justSavedId || undefined}
+                className={cn(
+                  "flex items-center justify-between rounded-lg border p-3 text-sm transition-shadow",
+                  r.id === justSavedId && "ring-2 ring-emerald-500",
+                )}
               >
                 <span>{r.name}</span>
                 {r.is_default ? (
