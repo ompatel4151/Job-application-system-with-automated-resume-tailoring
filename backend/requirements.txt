@@ -3,6 +3,7 @@ uvicorn[standard]>=0.30
 python-multipart>=0.0.9
 pypdf>=5.0
 sqlalchemy>=2.0
+alembic>=1.13
 anthropic>=0.120
 openai>=1.40
 pydantic>=2.7

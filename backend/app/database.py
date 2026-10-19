@@ -1,7 +1,12 @@
-from sqlalchemy import create_engine
+from pathlib import Path
+
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.config import settings
+
+MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
+BASELINE = "0001"
 
 
 def _normalize(url: str) -> str:
@@ -40,3 +45,31 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def alembic_config(url: str | None = None):
+    from alembic.config import Config
+
+    cfg = Config()
+    cfg.set_main_option("script_location", str(MIGRATIONS_DIR))
+    # Config values go through configparser, where % is special.
+    cfg.set_main_option("sqlalchemy.url", _normalize(url or DATABASE_URL).replace("%", "%%"))
+    return cfg
+
+
+def migrate(url: str | None = None) -> None:
+    """Bring the schema up to date.
+
+    A database built by create_all before migrations existed (the live one)
+    has the tables but no alembic_version. It already matches the baseline, so
+    it's stamped as baseline instead of having its tables created again.
+    """
+    from alembic import command
+
+    cfg = alembic_config(url)
+    probe = create_engine(cfg.get_main_option("sqlalchemy.url"))
+    tables = set(inspect(probe).get_table_names())
+    probe.dispose()
+    if "applications" in tables and "alembic_version" not in tables:
+        command.stamp(cfg, BASELINE)
+    command.upgrade(cfg, "head")

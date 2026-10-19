@@ -164,6 +164,14 @@ Backend:
 cd backend && pytest
 ```
 
+The migration tests also run against Postgres when `TEST_POSTGRES_URL` is set
+(CI sets it; locally they skip):
+
+```bash
+docker run -d --name pg -e POSTGRES_PASSWORD=pg -p 55432:5432 postgres:16-alpine
+TEST_POSTGRES_URL=postgresql://postgres:pg@localhost:55432/postgres pytest
+```
+
 Frontend:
 
 ```bash
@@ -181,6 +189,8 @@ The backend suite covers:
 - the API-key gate and the Markdown renderer
 - contract tests that pin response shapes and status codes
 - idempotency, input validation and rate limiting
+- migrations: they build exactly the models' schema, round-trip down and
+  up, and adopt a database built before migrations existed
 
 The frontend tests cover the status config, the API client (including the
 `Idempotency-Key` header) and the board rendering. CI runs all of these on
@@ -251,8 +261,21 @@ indexed. Postgres doesn't index foreign keys on its own.
 - That's one machine, with client and server sharing the CPU. Full setup and
   every run are in RESULTS.md.
 - Reproduce it with `scripts/seed_load.py` and `scripts/loadtest.py`.
-- `create_all` doesn't add indexes to an existing database, so an existing
-  database needs the `CREATE INDEX` statement from RESULTS.md.
+- The index is part of the baseline migration (see Schema migrations below).
+
+**Schema migrations.** The schema is managed by Alembic
+(`backend/migrations/`). The app runs `alembic upgrade head` at startup, with
+the same retry as before for a database that is still waking up.
+
+- A Postgres advisory lock lets only one instance migrate at a time, so
+  several instances can start together.
+- A database built by the old `create_all` (the live one) has no
+  `alembic_version` table. It's stamped as the baseline instead of having its
+  tables created again. Its schema was compared with the baseline column by
+  column before relying on this.
+- New schema change: edit `app/models.py`, then from `backend/` run
+  `alembic revision --autogenerate -m "what changed"` and review the file. The
+  drift test fails if a model change has no migration.
 
 **Known limitations.**
 
@@ -260,7 +283,6 @@ indexed. Postgres doesn't index foreign keys on its own.
   whole API through its proxy (AUDIT #1). Rate limiting reduces the damage;
   real auth is the fix.
 - Rate limits aren't shared across servers.
-- There are no schema migrations.
 - List endpoints aren't paginated. The full board list is now the slowest
   endpoint in the load test.
 

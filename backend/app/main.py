@@ -13,7 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import ratelimit
 from app.config import settings
-from app.database import Base, engine
+from app.database import migrate
 from app.routers import applications, resumes, tailoring
 
 logger = logging.getLogger(__name__)
@@ -45,14 +45,14 @@ def error_response(status: int, detail: str, headers=None, **extra) -> JSONRespo
 
 
 def init_db(retries: int = CREATE_RETRIES, delay: float = RETRY_DELAY_SECONDS) -> None:
-    """Create tables, tolerating a database that is still waking up.
+    """Run migrations, tolerating a database that is still waking up.
 
     Managed Postgres instances can refuse the first connection after a cold
     start; without the retry a transient blip takes the whole app down at boot.
     """
     for attempt in range(1, retries + 1):
         try:
-            Base.metadata.create_all(bind=engine)
+            migrate()
             return
         except OperationalError:
             if attempt == retries:

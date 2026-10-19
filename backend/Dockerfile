@@ -11,14 +11,16 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# App code.
+# App code, and the migrations it runs at startup.
 COPY app ./app
+COPY migrations ./migrations
+COPY alembic.ini ./
 
 # Run as a non-root user.
 RUN useradd --create-home --uid 10001 appuser
 USER appuser
 
-# Cloud Run injects PORT (defaults to 8080); listen on it.
+# The host injects PORT (defaults to 8080); listen on it.
 ENV PORT=8080
 EXPOSE 8080
 
