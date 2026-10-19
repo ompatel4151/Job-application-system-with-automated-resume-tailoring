@@ -21,6 +21,8 @@ export default function ResumesPage() {
   const {
     items: resumes,
     isLoading,
+    isError,
+    error,
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
@@ -119,6 +121,14 @@ export default function ResumesPage() {
         </h2>
         {isLoading ? (
           <Skeleton className="h-12 w-full" />
+        ) : isError ? (
+          // Not "No resumes yet": a failed load must not look like an empty list.
+          <p
+            role="alert"
+            className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"
+          >
+            Could not load your resumes: {(error as Error).message}
+          </p>
         ) : resumes.length > 0 ? (
           <ul className="space-y-2">
             {resumes.map((r) => (

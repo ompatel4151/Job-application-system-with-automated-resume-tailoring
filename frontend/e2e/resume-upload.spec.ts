@@ -22,7 +22,12 @@ test("an uploaded resume fills the form, shows a readable review, and saves it a
                 created_at: "2026-10-19T00:00:00Z", updated_at: "2026-10-19T00:00:00Z" },
       });
     }
-    return route.fulfill({ json: { items: [], next_cursor: null } });
+    // The list includes the resume once it has been saved, like the backend.
+    const items = saved
+      ? [{ id: 1, name: "Base resume", is_default: true, content: parsed,
+           created_at: "2026-10-19T00:00:00Z", updated_at: "2026-10-19T00:00:00Z" }]
+      : [];
+    return route.fulfill({ json: { items, next_cursor: null } });
   });
   await page.route("**/api/applications/stats", (route) =>
     route.fulfill({ json: { total: 0, by_status: {} } }),
@@ -49,4 +54,24 @@ test("an uploaded resume fills the form, shows a readable review, and saves it a
   expect(content.full_name).toBe("Om Patel");
   expect(content.experience[0].company).toBe("Acme");
   expect(content.education[0].school).toBe("Penn State");
+
+  // And it shows up in the saved list without a reload.
+  await expect(page.getByRole("listitem").filter({ hasText: "default" })).toBeVisible();
+  await expect(page.getByText("No resumes yet")).toHaveCount(0);
+});
+
+test("a failed list load says so instead of showing an empty list", async ({ page }) => {
+  await page.route("**/api/resumes", (route) =>
+    route.fulfill({ status: 500, json: { detail: "Internal server error", code: "internal_error" } }),
+  );
+  await page.route("**/api/applications/stats", (route) =>
+    route.fulfill({ json: { total: 0, by_status: {} } }),
+  );
+
+  await page.goto("/resumes");
+
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Could not load your resumes" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("No resumes yet")).toHaveCount(0);
 });
