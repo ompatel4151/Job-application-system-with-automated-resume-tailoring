@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
-from app import idempotency, models
+from app import idempotency, models, observability
 from app.auth import CurrentUser
+from app.config import settings
 from app.database import get_db, get_owned
 from app.idempotency import IdempotencyKeyHeader
 from app.models import utcnow
@@ -107,7 +108,9 @@ async def parse_resume_file(file: UploadFile = File(...)):
     """
     data = await _read_capped(file)
     try:
-        return extraction.extract_resume_content(data, _media_type(file))
+        # Includes local PDF text extraction, which may skip the LLM entirely.
+        with observability.llm_timer(settings.resolve_provider(), "parse"):
+            return extraction.extract_resume_content(data, _media_type(file))
     except extraction.UnsupportedFileType as exc:
         raise HTTPException(415, str(exc)) from exc
     except extraction.FileTooLarge as exc:

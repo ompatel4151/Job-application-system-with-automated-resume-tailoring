@@ -59,3 +59,17 @@ to API call is untested end to end until you sign in on the deployed site.
 | Tests: backend 155 passed with Postgres and Redis (140 without them). | local | `TEST_POSTGRES_URL=... TEST_REDIS_URL=... pytest` |
 
 Not measured: latency added per request against a hosted Redis (Upstash).
+
+## Item 5: observability
+
+| Fact | Where | How |
+|---|---|---|
+| A request id goes from the Next.js proxy to the backend and back to the browser. A missing or malformed id (not a UUID, 500 characters long, or containing a newline) is replaced with a new one. | local | `tests/test_observability.py`, `route.test.ts` |
+| One JSON log line per request, with the route template, status, duration and user id. No token appears in any log record. | local | Same tests, plus the production image's container log |
+| Metrics are labelled by route template. In the production image, a request refused with 401 before routing was still counted as `/api/applications/{application_id}`. | local, Docker | `curl /metrics` against the image, 1 run |
+| Mutation check: labelling by raw path instead of route template made 2 tests fail. | local | Edited `app/main.py`, ran the tests, restored from a copy |
+| `/metrics` returns 401 without the API key, and also when no key is configured. | local | Tests, plus `curl` against the image |
+| Tests: backend 171 passed with Postgres and Redis (156 without them). Frontend: 16 Vitest tests and 3 Playwright tests. | local | `pytest`, `npm test`, `npm run test:e2e` |
+
+Not measured: overhead added by the logging and metrics per request (see the
+load-test re-run at the end). Nothing scrapes the metrics yet.

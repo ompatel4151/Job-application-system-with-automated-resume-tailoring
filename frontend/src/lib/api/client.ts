@@ -2,7 +2,7 @@
 // proxied server-side to the FastAPI backend (see src/app/api/[...path]).
 // The browser therefore never talks to the backend directly and never sees
 // the backend API key.
-import { listPath, toPage } from "./pages";
+import { listPath } from "./pages";
 import type {
   ApplicationCreate,
   ApplicationOut,
@@ -66,12 +66,8 @@ function idempotencyHeader(key?: string): Record<string, string> {
 export const api = {
   // Applications
   // Lists are cursor-paginated: pass the previous page's next_cursor.
-  listApplications: async (status?: ApplicationStatus, cursor?: string) =>
-    toPage(
-      await http<ApplicationPage | ApplicationOut[]>(
-        listPath("/applications", { status, cursor }),
-      ),
-    ),
+  listApplications: (status?: ApplicationStatus, cursor?: string) =>
+    http<ApplicationPage>(listPath("/applications", { status, cursor })),
   getApplication: (id: number) => http<ApplicationOut>(`/applications/${id}`),
   createApplication: (body: ApplicationCreate, idempotencyKey?: string) =>
     http<ApplicationOut>(`/applications`, {
@@ -89,8 +85,8 @@ export const api = {
   stats: () => http<PipelineStats>(`/applications/stats`),
 
   // Resumes
-  listResumes: async (cursor?: string) =>
-    toPage(await http<ResumePage | ResumeOut[]>(listPath("/resumes", { cursor }))),
+  listResumes: (cursor?: string) =>
+    http<ResumePage>(listPath("/resumes", { cursor })),
   createResume: (body: ResumeCreate, idempotencyKey?: string) =>
     http<ResumeOut>(`/resumes`, {
       method: "POST",
@@ -105,10 +101,8 @@ export const api = {
       headers: idempotencyHeader(idempotencyKey),
       body: JSON.stringify({ resume_id: resumeId ?? null }),
     }),
-  listTailored: async (applicationId: number, cursor?: string) =>
-    toPage(
-      await http<TailoredResumePage | TailoredResumeOut[]>(
-        listPath(`/applications/${applicationId}/tailored`, { cursor }),
-      ),
+  listTailored: (applicationId: number, cursor?: string) =>
+    http<TailoredResumePage>(
+      listPath(`/applications/${applicationId}/tailored`, { cursor }),
     ),
 };

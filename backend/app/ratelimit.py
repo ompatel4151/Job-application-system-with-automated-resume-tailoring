@@ -20,6 +20,7 @@ import time
 import redis.asyncio as aioredis
 from fastapi import Request
 
+from app import observability
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -113,6 +114,7 @@ class RedisTokenBucket:
             # Fail open: a Redis outage shouldn't take the whole app down. The
             # cost is that limits stop working until Redis is back.
             logger.exception("Rate limiter can't reach Redis; allowing the request")
+            observability.REDIS_ERRORS.inc()
             return 0.0
         return float(wait)
 
@@ -157,7 +159,10 @@ async def retry_after(request: Request) -> float:
     is_llm = request.method == "POST" and _LLM_ROUTE.match(request.url.path)
     limiter = LLM if is_llm else API
     wait = limiter.take(client_id(request))
-    return await wait if inspect.isawaitable(wait) else wait
+    wait = await wait if inspect.isawaitable(wait) else wait
+    if wait:
+        observability.RATE_LIMITED.labels("llm" if is_llm else "api").inc()
+    return wait
 
 
 def reset() -> None:

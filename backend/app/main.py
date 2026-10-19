@@ -3,18 +3,21 @@ import math
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy.exc import OperationalError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.routing import Match
 
-from app import auth, ratelimit
+from app import auth, observability, ratelimit
 from app.config import settings
 from app.database import migrate
 from app.routers import applications, resumes, tailoring
 
+observability.configure_logging()
 logger = logging.getLogger(__name__)
 
 CREATE_RETRIES = 5
@@ -117,6 +120,39 @@ async def authenticate(request: Request, call_next):
     return await call_next(request)
 
 
+def _route_template(request: Request) -> str:
+    """"/api/applications/{application_id}", not "/api/applications/42". Also
+    found for requests refused before routing (401, 429)."""
+    for route in _ROUTES:
+        if route.matches(request.scope)[0] == Match.FULL:
+            return route.path
+    return "unmatched"
+
+
+# Registered last, so it runs first: it times and logs everything below it.
+@app.middleware("http")
+async def observe(request: Request, call_next):
+    # Each request runs in its own asyncio task, so this never leaks into
+    # another request's logs.
+    request_id = observability.request_id_from(request.headers.get("x-request-id"))
+    observability.REQUEST_ID.set(request_id)
+    start = time.perf_counter()
+    status = 500  # if call_next raises, the error handler answers with a 500
+    try:
+        response = await call_next(request)
+        status = response.status_code
+        response.headers["X-Request-ID"] = request_id
+        return response
+    finally:
+        observability.record_request(
+            request.method,
+            _route_template(request),
+            status,
+            time.perf_counter() - start,
+            getattr(request.state, "user_id", None),
+        )
+
+
 @app.exception_handler(StarletteHTTPException)
 async def http_error(request: Request, exc: StarletteHTTPException):
     # Covers our HTTPExceptions and the framework's own 404/405 for bad routes.
@@ -151,3 +187,22 @@ app.include_router(tailoring.router)
 @app.get("/health", tags=["meta"])
 def health():
     return {"status": "ok"}
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics(request: Request):
+    """Prometheus metrics. Needs the API key; closed if none is configured."""
+    if not settings.api_key_matches(request.headers.get("x-api-key")):
+        return error_response(401, "Invalid or missing API key.")
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+# Every route with its full path template, for metric and log labels. (The
+# app's own route list wraps included routers, which hide their paths.)
+_ROUTES = [
+    route
+    for routes in (app.router.routes, resumes.router.routes, applications.router.routes,
+                   tailoring.router.routes)
+    for route in routes
+    if hasattr(route, "path")
+]

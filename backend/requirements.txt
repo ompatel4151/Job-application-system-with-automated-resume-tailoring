@@ -11,6 +11,7 @@ pydantic-settings>=2.2
 python-dotenv>=1.0
 PyJWT[crypto]>=2.9
 redis>=5.0
+prometheus-client>=0.20
 psycopg2-binary>=2.9
 
 # dev / test

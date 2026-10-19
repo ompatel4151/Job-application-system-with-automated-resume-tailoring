@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
-from app import idempotency, models
+from app import idempotency, models, observability
 from app.auth import CurrentUser
+from app.config import settings
 from app.database import get_db, get_owned
 from app.idempotency import IdempotencyKeyHeader
 from app.pagination import DEFAULT_LIMIT, Cursor, Limit, paginate
@@ -57,12 +58,13 @@ def tailor_for_application(
             )
 
     try:
-        result = tailoring.tailor_resume(
-            resume_content=resume.content,
-            job_description=application.job_description,
-            company=application.company,
-            role=application.role,
-        )
+        with observability.llm_timer(settings.resolve_provider(), "tailor"):
+            result = tailoring.tailor_resume(
+                resume_content=resume.content,
+                job_description=application.job_description,
+                company=application.company,
+                role=application.role,
+            )
     except RuntimeError as exc:
         raise HTTPException(502, str(exc)) from exc
 

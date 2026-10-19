@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { flattenPages, listPath, nextPageParam, toPage } from "./pages";
+import { flattenPages, listPath, nextPageParam } from "./pages";
 
 const page = (ids: number[], next: string | null) => ({
   items: ids.map((id) => ({ id })),
@@ -17,11 +17,6 @@ describe("cursor pages", () => {
     const data = { pages: [page([5, 4], "c1"), page([4, 3], null)], pageParams: [] };
     expect(flattenPages(data).map((r) => r.id)).toEqual([5, 4, 3]);
     expect(flattenPages(undefined)).toEqual([]);
-  });
-
-  it("accepts the old plain-array response during a deploy", () => {
-    expect(toPage([{ id: 1 }])).toEqual({ items: [{ id: 1 }], next_cursor: null });
-    expect(toPage(page([1], "x"))).toEqual(page([1], "x"));
   });
 
   it("builds query strings without empty params", () => {

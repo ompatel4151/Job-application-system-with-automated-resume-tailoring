@@ -19,7 +19,11 @@ export const dynamic = "force-dynamic";
 async function proxy(req: NextRequest, path: string[]): Promise<Response> {
   const target = `${BACKEND_URL}/api/${path.join("/")}${req.nextUrl.search}`;
 
-  const headers = new Headers();
+  // One ID per request, sent to the backend and logged on both sides, so a
+  // request can be followed from the Vercel logs into the backend logs.
+  const requestId = crypto.randomUUID();
+  const started = Date.now();
+  const headers = new Headers({ "x-request-id": requestId });
   const contentType = req.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
   // Lets the backend recognize a retried create (see backend/app/idempotency.py).
@@ -45,26 +49,44 @@ async function proxy(req: NextRequest, path: string[]): Promise<Response> {
       cache: "no-store",
     });
   } catch {
+    log(requestId, req.method, path, 502, started);
     return Response.json(
       { detail: "The backend is unreachable." },
-      { status: 502 },
+      { status: 502, headers: { "x-request-id": requestId } },
     );
   }
+  log(requestId, req.method, path, res.status, started);
 
   // Pass through only the headers a client needs.
   const out = new Headers();
   // retry-after: how long to wait after a 429 (rate limit).
   // idempotent-replayed: marks a retried create that was answered from storage.
+  // x-request-id: quote it when reporting a problem.
   for (const h of [
     "content-type",
     "content-disposition",
     "retry-after",
     "idempotent-replayed",
+    "x-request-id",
   ]) {
     const v = res.headers.get(h);
     if (v) out.set(h, v);
   }
   return new Response(res.body, { status: res.status, headers: out });
+}
+
+// A JSON line per proxied call. The path's first segment only (no ids), and
+// never headers, so no tokens or personal data end up in the logs.
+function log(requestId: string, method: string, path: string[], status: number, started: number) {
+  console.log(
+    JSON.stringify({
+      request_id: requestId,
+      method,
+      route: `/api/${path[0] ?? ""}`,
+      status,
+      duration_ms: Date.now() - started,
+    }),
+  );
 }
 
 const handler = async (

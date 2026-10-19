@@ -24,4 +24,6 @@ USER appuser
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+# --no-access-log: the app writes its own JSON line per request, with the
+# request id and route template.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --no-access-log"]

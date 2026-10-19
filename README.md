@@ -51,6 +51,7 @@ backend/                 # FastAPI service
 ├── app/
 │   ├── main.py          # app, router wiring, CORS, auth and rate-limit middleware
 │   ├── auth.py          # verifies Supabase access tokens (ES256, JWKS)
+│   ├── observability.py # request ids, JSON logs, Prometheus metrics
 │   ├── config.py        # environment-based settings
 │   ├── database.py      # engine, sessions (run as the user for RLS), migrate()
 │   ├── models.py        # ORM: Resume, Application, TailoredResume
@@ -301,6 +302,19 @@ and `?limit=` for the page size (default 50, max 100).
 - The board sorts by last update, so moving a card while pages are loading
   can show it twice. The frontend drops the duplicate by id.
 
+**Observable.** See [RUNBOOK.md](RUNBOOK.md) for the three likely failures.
+
+- Every request gets an `X-Request-ID`. The Next.js proxy creates it, the
+  backend uses it, and it's returned to the browser. Both sides log one JSON
+  line per request with that id, so a request can be followed from the Vercel
+  logs to the Render logs. Tokens, headers and bodies are never logged.
+- `GET /metrics` serves Prometheus metrics: requests by route template and
+  status, a latency histogram, 4xx and 5xx counts, rate-limit rejections by
+  bucket, LLM call latency by provider, and Redis errors. It needs the
+  `API_KEY`, and is closed if none is set.
+- Labels use route templates (`/api/applications/{application_id}`), never raw
+  paths, so the number of time series stays fixed.
+
 **Schema migrations.** The schema is managed by Alembic
 (`backend/migrations/`). The app runs `alembic upgrade head` at startup, with
 the same retry as before for a database that is still waking up.
@@ -316,6 +330,10 @@ the same retry as before for a database that is still waking up.
   drift test fails if a model change has no migration.
 
 **Known limitations.**
+
+- Nothing scrapes `/metrics` on a schedule, so there are no dashboards or
+  alerts yet. A free hosted Prometheus (such as Grafana Cloud's free tier)
+  could scrape it.
 
 - Sign-up is open, so anyone can make an account and spend up to 5 LLM calls
   a minute. Requests without a valid token aren't rate-limited, but they're
