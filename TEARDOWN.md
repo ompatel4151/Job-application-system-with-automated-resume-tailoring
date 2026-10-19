@@ -15,6 +15,33 @@ Standing cost is **$0**, on free plans throughout:
 
 Nothing here can run up a bill, so teardown is about tidiness, not spend.
 
+## Remove the AWS backend (only if it was ever applied)
+
+This is the only part that bills by the hour. From `infra/`, with the same
+variables you applied with:
+
+1. In Vercel, point `BACKEND_URL` back at Render first, so the site keeps
+   working.
+2. `terraform destroy`. Read the list, then type `yes`. It removes the ECS
+   service and cluster, the ALB, the target group, security groups, ECR
+   (images included, `force_delete`), the log group, the secrets (immediately,
+   no 30-day recovery window), the IAM roles, the OIDC provider and the
+   budget.
+3. Check that nothing is left that could bill:
+
+   ```bash
+   aws ecs list-clusters --region us-west-1
+   aws elbv2 describe-load-balancers --region us-west-1 --query 'LoadBalancers[].LoadBalancerName'
+   aws ec2 describe-addresses --region us-west-1
+   aws secretsmanager list-secrets --region us-west-1 --query 'SecretList[].Name'
+   ```
+
+   Each should come back empty, or without any `job-tracker` entries.
+4. Delete the ACM certificate and the DNS record by hand; they weren't made by
+   Terraform.
+5. In GitHub, delete the `AWS_DEPLOY_ROLE_ARN` variable, so the deploy
+   workflow is skipped again.
+
 ## Remove the frontend (Vercel)
 
 In the [Vercel dashboard](https://vercel.com/dashboard): open the project >

@@ -1,0 +1,57 @@
+name: Deploy backend to AWS
+
+# Off until the AWS stack exists: set the repository variable
+# AWS_DEPLOY_ROLE_ARN (terraform output deploy_role_arn) to turn it on.
+on:
+  push:
+    branches: [main]
+    paths: ["backend/**", ".github/workflows/deploy-aws.yml"]
+  workflow_dispatch:
+
+permissions:
+  id-token: write # OIDC: GitHub proves who it is, AWS hands out short-lived keys
+  contents: read
+
+concurrency: deploy-aws
+
+jobs:
+  deploy:
+    if: vars.AWS_DEPLOY_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-west-1
+      CLUSTER: job-tracker
+      SERVICE: job-tracker-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push the image
+        id: image
+        run: |
+          IMAGE=${{ steps.ecr.outputs.registry }}/job-tracker-backend:${{ github.sha }}
+          docker build -t "$IMAGE" backend
+          docker push "$IMAGE"
+          echo "uri=$IMAGE" >> "$GITHUB_OUTPUT"
+      - name: Point the task definition at the new image
+        run: |
+          aws ecs describe-task-definition --task-definition job-tracker-backend \
+            --query taskDefinition > task-def.json
+      - id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-def.json
+          container-name: backend
+          image: ${{ steps.image.outputs.uri }}
+      # Waits until the new task passes the load balancer's /health check;
+      # if it never does, the old task keeps serving and this step fails.
+      - uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          cluster: ${{ env.CLUSTER }}
+          service: ${{ env.SERVICE }}
+          wait-for-service-stability: true

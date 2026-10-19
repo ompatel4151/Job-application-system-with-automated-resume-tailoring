@@ -9,3 +9,9 @@ venv/
 dist/
 build/
 *.egg-info/
+
+# Terraform: state can hold resource details; never commit it.
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/*.tfvars
