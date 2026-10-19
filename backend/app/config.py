@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     # Per-user rate limits on /api (see app/ratelimit.py). Off only for local
     # experiments such as load testing.
     rate_limit_enabled: bool = True
+    # Share rate-limit buckets across instances, e.g. redis://... or rediss://
+    # (Upstash). Unset: each process keeps its own buckets in memory.
+    redis_url: str | None = None
 
     # Which LLM backend to tailor with. "auto" picks Claude when an Anthropic
     # key is present, otherwise Groq, so setting a single key is enough.

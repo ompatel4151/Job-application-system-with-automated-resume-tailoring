@@ -45,3 +45,17 @@ to API call is untested end to end until you sign in on the deployed site.
 | Mutation check: dropping the `id` tie-breaker from the cursor comparison made the identical-timestamp test fail. | local | Edited `app/pagination.py`, ran the tests, restored from a copy. |
 | On 200,000 applications (20,000 owned by one user), a cursor page about 5,000 rows deep read **9 shared buffers and 51 rows** (index scan backward on `ix_applications_user_updated`), in **0.09 to 0.12 ms**. The same page by `OFFSET 5000` read **685 buffers and 5,051 rows**, in **1.15 to 1.60 ms**. | local, Postgres 16 | `EXPLAIN (ANALYZE, BUFFERS)`, 3 timing runs each, synthetic data from `generate_series`. Query plan time only, not an HTTP measurement. |
 | Tests: backend 149 passed with Postgres (140 without it). Frontend: 14 Vitest tests and 3 Playwright tests. | local | `pytest`, `npm test`, `E2E_PORT=3107 npm run test:e2e` |
+
+## Item 4: shared rate limits (Redis, Lua)
+
+| Fact | Where | How |
+|---|---|---|
+| 2 separate app processes on one Redis: 10 LLM-endpoint calls alternating between them gave **5 allowed and 5 × 429**, so the limit is 5 a minute in total. | local, Redis 7 in Docker | `tests/test_redis_ratelimit.py`. Real uvicorn processes, real token verification against a local JWKS. |
+| The control, the same 2 processes without Redis, gave **0 × 429** for the same 10 calls (each process allowed 5 on its own). | local | Same test file. |
+| 50 concurrent takes on a 10-token bucket: exactly 10 allowed. | local, Redis 7 | `asyncio.gather` of 50 `take()` calls. |
+| Mutation check: replacing the Lua script with a separate read then write let **50 of 50** through, in 5 of 5 runs. | local | Edited `app/ratelimit.py`, ran the test 5 times, restored from a copy. |
+| With Redis unreachable, a request is allowed (fails open). | local | Pointed the bucket at a closed port. |
+
+| Tests: backend 155 passed with Postgres and Redis (140 without them). | local | `TEST_POSTGRES_URL=... TEST_REDIS_URL=... pytest` |
+
+Not measured: latency added per request against a hosted Redis (Upstash).

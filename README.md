@@ -268,8 +268,15 @@ logged; internals aren't sent to the client.
 for the two LLM endpoints and 60 per minute for everything else, in separate
 buckets. Over the limit you get a 429 with `Retry-After`.
 
-- Limits live in memory, so they are per server process and reset on
-  restart.
+- With `REDIS_URL` set, the buckets live in Redis and every instance spends
+  from the same one. One Lua script does the refill and the spend, so two
+  instances can't both take the last token. Redis's clock is used, not each
+  instance's. A test starts 2 app processes on one Redis and gets exactly 5
+  LLM calls through, not 10.
+- If Redis is unreachable the limiter fails open: requests are allowed and an
+  error is logged, so an outage doesn't take the app down, but limits stop
+  working until Redis is back.
+- Without `REDIS_URL` (local dev), buckets live in memory, per process.
 
 **Indexed for the detail page.** `tailored_resumes.application_id` is
 indexed. Postgres doesn't index foreign keys on its own.
@@ -313,7 +320,8 @@ the same retry as before for a database that is still waking up.
 - Sign-up is open, so anyone can make an account and spend up to 5 LLM calls
   a minute. Requests without a valid token aren't rate-limited, but they're
   refused before any database or LLM work.
-- Rate limits aren't shared across servers.
+- Each rate-limit check is a round trip to Redis. Its latency against a
+  hosted Redis (Upstash) hasn't been measured.
 
 ## Deployment
 

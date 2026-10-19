@@ -21,6 +21,8 @@ Changes from the draft, found while building:
   `authenticated`.
 - Item 2: migration 0002 refuses to run if any table has rows (they'd have
   no owner). The live database had 0 rows; check again just before merging.
+- Item 4: the Redis client is async (`redis.asyncio`), so a round trip to a
+  hosted Redis doesn't block the event loop for other requests.
 
 ## What I read
 

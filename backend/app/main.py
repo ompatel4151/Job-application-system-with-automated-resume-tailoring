@@ -92,7 +92,7 @@ app.add_middleware(
 # first): it needs the user id that authenticate sets.
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
-    wait = ratelimit.retry_after(request)
+    wait = await ratelimit.retry_after(request)
     if wait:
         seconds = math.ceil(wait)
         return error_response(

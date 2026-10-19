@@ -9,7 +9,7 @@ jobs:
   backend:
     name: Backend (pytest)
     runs-on: ubuntu-latest
-    # A real Postgres for the migration tests (they skip without it).
+    # A real Postgres for the migration and RLS tests (they skip without it).
     services:
       postgres:
         image: postgres:16-alpine
@@ -18,8 +18,15 @@ jobs:
         ports: ["5432:5432"]
         options: >-
           --health-cmd pg_isready --health-interval 5s --health-timeout 3s --health-retries 10
+      # Shared rate-limit buckets (the Redis tests skip without it).
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
     env:
       TEST_POSTGRES_URL: postgresql://postgres:pg@localhost:5432/postgres
+      TEST_REDIS_URL: redis://localhost:6379/0
     defaults:
       run:
         working-directory: backend

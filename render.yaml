@@ -32,3 +32,6 @@ services:
       # https://<ref>.supabase.co; the API only accepts this project's tokens.
       - key: SUPABASE_URL
         sync: false
+      # Shared rate-limit buckets, e.g. Upstash's rediss:// URL. Optional.
+      - key: REDIS_URL
+        sync: false
