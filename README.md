@@ -206,14 +206,14 @@ every pull request.
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| `GET/POST` | `/api/applications` | List (filterable by status) / create |
+| `GET/POST` | `/api/applications` | List (paginated, filterable by status) / create |
 | `GET/PATCH/DELETE` | `/api/applications/{id}` | Read / update / delete |
 | `GET` | `/api/applications/stats` | Pipeline counts |
-| `GET/POST` | `/api/resumes` | List / create base resumes |
+| `GET/POST` | `/api/resumes` | List (paginated) / create base resumes |
 | `POST` | `/api/resumes/parse` | Parse an uploaded PDF or image into resume content |
 | `GET/PUT/DELETE` | `/api/resumes/{id}` | Read / update / delete |
 | `POST` | `/api/applications/{id}/tailor` | Generate a tailored resume |
-| `GET` | `/api/applications/{id}/tailored` | List tailored versions |
+| `GET` | `/api/applications/{id}/tailored` | List tailored versions (paginated) |
 | `GET` | `/api/tailored/{id}/markdown` | Download as Markdown |
 
 ## Reliability and safety
@@ -281,6 +281,19 @@ indexed. Postgres doesn't index foreign keys on its own.
 - Reproduce it with `scripts/seed_load.py` and `scripts/loadtest.py`.
 - The index is part of the baseline migration (see Schema migrations below).
 
+**Lists are paginated with cursors.** `GET /api/applications`,
+`/api/resumes` and `/api/applications/{id}/tailored` return
+`{"items": [...], "next_cursor": "..."}`. Pass `?cursor=` for the next page,
+and `?limit=` for the page size (default 50, max 100).
+
+- The cursor is the last row's (sort value, id). The next page seeks past it
+  through the `(user_id, sort, id)` index instead of counting rows with
+  `OFFSET`, so a deep page costs the same as the first. On 200,000 synthetic
+  rows a page about 5,000 rows deep read 9 buffers against 685 for `OFFSET`
+  (RESUME_FACTS.md).
+- The board sorts by last update, so moving a card while pages are loading
+  can show it twice. The frontend drops the duplicate by id.
+
 **Schema migrations.** The schema is managed by Alembic
 (`backend/migrations/`). The app runs `alembic upgrade head` at startup, with
 the same retry as before for a database that is still waking up.
@@ -301,8 +314,6 @@ the same retry as before for a database that is still waking up.
   a minute. Requests without a valid token aren't rate-limited, but they're
   refused before any database or LLM work.
 - Rate limits aren't shared across servers.
-- List endpoints aren't paginated. The full board list is now the slowest
-  endpoint in the load test.
 
 ## Deployment
 

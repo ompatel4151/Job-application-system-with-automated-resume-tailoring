@@ -28,7 +28,9 @@ export default function TailorPage() {
   const id = Number(params.id);
 
   const { data: app, isLoading } = useApplication(id);
-  const { data: resumes } = useResumes();
+  // ponytail: checks only the first page (50 resumes) for a default; the
+  // backend still decides, and says so with a 400 if there isn't one.
+  const { items: resumes } = useResumes();
   const update = useUpdateApplication();
   const tailor = useTailor();
 
@@ -43,7 +45,7 @@ export default function TailorPage() {
   // because the JD isn't part of the request body the backend fingerprints.
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
-  const hasDefaultResume = (resumes ?? []).some((r) => r.is_default);
+  const hasDefaultResume = resumes.some((r) => r.is_default);
   const busy = tailor.isPending || update.isPending;
 
   async function runTailor() {

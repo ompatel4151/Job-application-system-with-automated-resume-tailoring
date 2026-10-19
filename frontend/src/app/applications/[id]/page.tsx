@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/hooks";
 import type { ApplicationStatus } from "@/lib/api/types";
 import { STATUSES, STATUS_LABELS } from "@/lib/api/types";
+import { LoadMore } from "@/components/load-more";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,7 +39,12 @@ export default function ApplicationDetailPage() {
   const router = useRouter();
 
   const { data: app, isLoading, isError, error } = useApplication(id);
-  const { data: tailored } = useTailored(id);
+  const {
+    items: tailored,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useTailored(id);
   const update = useUpdateApplication();
   const remove = useDeleteApplication();
 
@@ -147,9 +153,10 @@ export default function ApplicationDetailPage() {
 
       <section className="mt-6">
         <h2 className="mb-2 text-sm font-medium text-muted-foreground">
-          Tailored resumes ({tailored?.length ?? 0})
+          Tailored resumes ({tailored.length}
+          {hasNextPage ? "+" : ""})
         </h2>
-        {tailored && tailored.length > 0 ? (
+        {tailored.length > 0 ? (
           <ul className="space-y-2">
             {tailored.map((t) => (
               <li
@@ -175,6 +182,11 @@ export default function ApplicationDetailPage() {
         ) : (
           <p className="text-sm text-muted-foreground">None yet.</p>
         )}
+        <LoadMore
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          fetchNextPage={fetchNextPage}
+        />
       </section>
 
       <Separator />

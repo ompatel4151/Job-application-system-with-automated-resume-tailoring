@@ -226,7 +226,7 @@ requests behave as before.
 | 8 | API key fails open, `!=` compare | **Fixed** (M5, limits item 2). Constant-time compare. The API key is now a second check; the user token is required and fails closed if `SUPABASE_URL` is unset. |
 | 9 | Upload size checked after receipt | **Open.** |
 | 10 | Missing indexes | **Fixed for `tailored_resumes.application_id`** (M6, measured). `applications.status` and `updated_at` not indexed; not measured to matter. |
-| 11 | No pagination | **Open.** The full board list is now the slowest endpoint in the M6 load test. |
+| 11 | No pagination | **Fixed** (limits item 3). Cursor pagination on all three lists, max 100 per page. |
 | 12 | No migrations | **Fixed** (limits item 1). Alembic; the live database matched the baseline and is adopted automatically. |
 | 13 | Rotate the API key | **Open.** Your action. |
 | 14 | Test gaps | **Fixed** (M2 to M6): 55 tests became 104 backend tests. |

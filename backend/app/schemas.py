@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Generic, TypeVar
 
 from pydantic import (
     AfterValidator,
@@ -167,3 +167,26 @@ class TailoredResumeOut(BaseModel):
 class PipelineStats(BaseModel):
     total: int
     by_status: dict[str, int]
+
+
+# ---------- Pages ----------
+
+T = TypeVar("T")
+
+
+class Page(BaseModel, Generic[T]):
+    items: list[T]
+    # Pass back as ?cursor= for the next page; null on the last page.
+    next_cursor: str | None
+
+
+class ApplicationPage(Page[ApplicationOut]):
+    pass
+
+
+class ResumePage(Page[ResumeOut]):
+    pass
+
+
+class TailoredResumePage(Page[TailoredResumeOut]):
+    pass

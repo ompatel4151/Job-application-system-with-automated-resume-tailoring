@@ -4,14 +4,14 @@ def test_create_and_list_resume(client, make_resume):
     assert resume["content"]["full_name"] == "Om Patel"
 
     resp = client.get("/api/resumes")
-    assert len(resp.json()) == 1
+    assert len(resp.json()["items"]) == 1
 
 
 def test_only_one_default_resume(client, make_resume):
     first = make_resume(name="First")
     second = make_resume(name="Second")
 
-    resumes = {r["name"]: r for r in client.get("/api/resumes").json()}
+    resumes = {r["name"]: r for r in client.get("/api/resumes").json()["items"]}
     assert resumes["First"]["is_default"] is False
     assert resumes["Second"]["is_default"] is True
     assert first["id"] != second["id"]
@@ -23,7 +23,7 @@ def test_make_default_via_update(client, make_resume):
 
     resp = client.put(f"/api/resumes/{first['id']}", json={"is_default": True})
     assert resp.status_code == 200
-    resumes = {r["name"]: r for r in client.get("/api/resumes").json()}
+    resumes = {r["name"]: r for r in client.get("/api/resumes").json()["items"]}
     assert resumes["First"]["is_default"] is True
     assert resumes["Second"]["is_default"] is False
 

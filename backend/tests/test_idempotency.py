@@ -4,7 +4,7 @@ BODY = {"company": "Acme", "role": "SWE", "job_description": "Python"}
 
 
 def _count(client):
-    return len(client.get("/api/applications").json())
+    return len(client.get("/api/applications").json()["items"])
 
 
 def test_same_key_twice_creates_one_record(client):

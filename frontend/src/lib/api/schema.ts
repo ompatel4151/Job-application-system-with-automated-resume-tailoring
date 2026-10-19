@@ -11,7 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Resumes */
+        /**
+         * List Resumes
+         * @description Newest first.
+         */
         get: operations["list_resumes_api_resumes_get"];
         put?: never;
         /** Create Resume */
@@ -72,7 +75,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Applications */
+        /**
+         * List Applications
+         * @description Most recently updated first.
+         */
         get: operations["list_applications_api_applications_get"];
         put?: never;
         /** Create Application */
@@ -143,7 +149,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Tailored */
+        /**
+         * List Tailored
+         * @description Newest first.
+         */
         get: operations["list_tailored_api_applications__application_id__tailored_get"];
         put?: never;
         post?: never;
@@ -255,6 +264,13 @@ export interface components {
              * @default 0
              */
             tailored_count: number;
+        };
+        /** ApplicationPage */
+        ApplicationPage: {
+            /** Items */
+            items: components["schemas"]["ApplicationOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
         };
         /**
          * ApplicationStatus
@@ -443,6 +459,13 @@ export interface components {
              */
             updated_at: string;
         };
+        /** ResumePage */
+        ResumePage: {
+            /** Items */
+            items: components["schemas"]["ResumeOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
         /** ResumeUpdate */
         ResumeUpdate: {
             /** Name */
@@ -474,6 +497,13 @@ export interface components {
              */
             created_at: string;
         };
+        /** TailoredResumePage */
+        TailoredResumePage: {
+            /** Items */
+            items: components["schemas"]["TailoredResumeOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -498,7 +528,10 @@ export type $defs = Record<string, never>;
 export interface operations {
     list_resumes_api_resumes_get: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number;
+                cursor?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -511,7 +544,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ResumeOut"][];
+                    "application/json": components["schemas"]["ResumePage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -683,6 +725,8 @@ export interface operations {
         parameters: {
             query?: {
                 status?: components["schemas"]["ApplicationStatus"] | null;
+                limit?: number;
+                cursor?: string | null;
             };
             header?: never;
             path?: never;
@@ -696,7 +740,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApplicationOut"][];
+                    "application/json": components["schemas"]["ApplicationPage"];
                 };
             };
             /** @description Validation Error */
@@ -899,7 +943,10 @@ export interface operations {
     };
     list_tailored_api_applications__application_id__tailored_get: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number;
+                cursor?: string | null;
+            };
             header?: never;
             path: {
                 application_id: number;
@@ -914,7 +961,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TailoredResumeOut"][];
+                    "application/json": components["schemas"]["TailoredResumePage"];
                 };
             };
             /** @description Validation Error */

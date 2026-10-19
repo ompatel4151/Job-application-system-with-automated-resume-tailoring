@@ -98,11 +98,11 @@ def test_b_cannot_read_a_s_rows(client, a_data):
 
 
 def test_b_s_lists_and_stats_leave_out_a_s_rows(client, a_data):
-    assert client.get("/api/applications", headers=AS_B).json() == []
-    assert client.get("/api/resumes", headers=AS_B).json() == []
+    assert client.get("/api/applications", headers=AS_B).json()["items"] == []
+    assert client.get("/api/resumes", headers=AS_B).json()["items"] == []
     assert client.get("/api/applications/stats", headers=AS_B).json()["total"] == 0
 
-    assert len(client.get("/api/applications").json()) == 1  # A still sees theirs
+    assert len(client.get("/api/applications").json()["items"]) == 1  # A still sees theirs
 
 
 def test_b_cannot_change_or_delete_a_s_rows(client, a_data, fake_tailoring):
@@ -158,7 +158,7 @@ def test_same_idempotency_key_for_two_users_is_two_requests(client):
     assert a.status_code == b.status_code == 201
     assert "Idempotent-Replayed" not in b.headers
     assert a.json()["id"] != b.json()["id"]
-    assert len(client.get("/api/applications", headers=AS_B).json()) == 1
+    assert len(client.get("/api/applications", headers=AS_B).json()["items"]) == 1
 
 
 def test_rate_limit_buckets_are_per_user(client, monkeypatch):

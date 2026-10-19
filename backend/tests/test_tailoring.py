@@ -50,7 +50,7 @@ def test_list_and_download_tailored(client, make_application, make_resume, fake_
 
     resp = client.get(f"/api/applications/{app_data['id']}/tailored")
     assert resp.status_code == 200
-    tailored_list = resp.json()
+    tailored_list = resp.json()["items"]
     assert len(tailored_list) == 2
 
     md = client.get(f"/api/tailored/{tailored_list[0]['id']}/markdown")

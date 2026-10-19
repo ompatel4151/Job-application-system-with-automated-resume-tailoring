@@ -6,7 +6,8 @@ from app import idempotency, models
 from app.auth import CurrentUser
 from app.database import get_db, get_owned
 from app.idempotency import IdempotencyKeyHeader
-from app.schemas import TailoredResumeOut, TailorRequest
+from app.pagination import DEFAULT_LIMIT, Cursor, Limit, paginate
+from app.schemas import TailoredResumeOut, TailoredResumePage, TailorRequest
 from app.services import tailoring
 
 router = APIRouter(prefix="/api", tags=["tailoring"])
@@ -81,17 +82,24 @@ def tailor_for_application(
     return out
 
 
-@router.get(
-    "/applications/{application_id}/tailored",
-    response_model=list[TailoredResumeOut],
-)
-def list_tailored(application_id: int, user: CurrentUser, db: Session = Depends(get_db)):
+@router.get("/applications/{application_id}/tailored", response_model=TailoredResumePage)
+def list_tailored(
+    application_id: int,
+    user: CurrentUser,
+    limit: Limit = DEFAULT_LIMIT,
+    cursor: Cursor = None,
+    db: Session = Depends(get_db),
+):
+    """Newest first."""
     get_owned(db, models.Application, application_id, user, "Application")
-    return (
-        db.query(models.TailoredResume)
-        .filter(models.TailoredResume.application_id == application_id)
-        .order_by(models.TailoredResume.created_at.desc())
-        .all()
+    query = db.query(models.TailoredResume).filter(
+        models.TailoredResume.application_id == application_id
+    )
+    rows, next_cursor = paginate(
+        query, models.TailoredResume.created_at, models.TailoredResume.id, limit, cursor
+    )
+    return TailoredResumePage(
+        items=[TailoredResumeOut.model_validate(t) for t in rows], next_cursor=next_cursor
     )
 
 

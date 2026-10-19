@@ -8,11 +8,20 @@ import type { ApplicationOut, ApplicationStatus } from "@/lib/api/types";
 import { STATUSES, STATUS_LABELS } from "@/lib/api/types";
 import { STATUS_STYLES } from "@/lib/status";
 import { cn } from "@/lib/utils";
+import { LoadMore } from "@/components/load-more";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApplicationCard } from "./application-card";
 
 export function KanbanBoard() {
-  const { data, isLoading, isError, error } = useApplications();
+  const {
+    items: apps,
+    isLoading,
+    isError,
+    error,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useApplications();
   const updateApplication = useUpdateApplication();
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [overStatus, setOverStatus] = useState<ApplicationStatus | null>(null);
@@ -27,7 +36,6 @@ export function KanbanBoard() {
     );
   }
 
-  const apps = data ?? [];
   const byStatus = (status: ApplicationStatus): ApplicationOut[] =>
     apps.filter((a) => a.status === status);
 
@@ -50,58 +58,65 @@ export function KanbanBoard() {
   }
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-4">
-      {STATUSES.map((status) => {
-        const items = byStatus(status);
-        return (
-          <div
-            key={status}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setOverStatus(status);
-            }}
-            onDragLeave={() =>
-              setOverStatus((s) => (s === status ? null : s))
-            }
-            onDrop={(e) => {
-              e.preventDefault();
-              moveTo(status);
-            }}
-            className={cn(
-              "flex w-72 shrink-0 flex-col rounded-xl border bg-muted/30 transition",
-              overStatus === status && "border-foreground/30 bg-muted/60",
-            )}
-          >
-            <div className="flex items-center gap-2 px-3 py-2.5">
-              <span
-                className={cn("h-2 w-2 rounded-full", STATUS_STYLES[status].dot)}
-              />
-              <span className="text-sm font-medium">
-                {STATUS_LABELS[status]}
-              </span>
-              <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-                {items.length}
-              </span>
-            </div>
-            <div className="flex min-h-24 flex-col gap-2 px-2 pb-3">
-              {items.map((a) => (
-                <ApplicationCard
-                  key={a.id}
-                  application={a}
-                  dragging={draggingId === a.id}
-                  onDragStart={setDraggingId}
+    <>
+      <div className="flex gap-3 overflow-x-auto pb-4">
+        {STATUSES.map((status) => {
+          const items = byStatus(status);
+          return (
+            <div
+              key={status}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setOverStatus(status);
+              }}
+              onDragLeave={() =>
+                setOverStatus((s) => (s === status ? null : s))
+              }
+              onDrop={(e) => {
+                e.preventDefault();
+                moveTo(status);
+              }}
+              className={cn(
+                "flex w-72 shrink-0 flex-col rounded-xl border bg-muted/30 transition",
+                overStatus === status && "border-foreground/30 bg-muted/60",
+              )}
+            >
+              <div className="flex items-center gap-2 px-3 py-2.5">
+                <span
+                  className={cn("h-2 w-2 rounded-full", STATUS_STYLES[status].dot)}
                 />
-              ))}
-              {items.length === 0 ? (
-                <p className="px-1 py-6 text-center text-xs text-muted-foreground">
-                  Nothing here yet
-                </p>
-              ) : null}
+                <span className="text-sm font-medium">
+                  {STATUS_LABELS[status]}
+                </span>
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                  {items.length}
+                </span>
+              </div>
+              <div className="flex min-h-24 flex-col gap-2 px-2 pb-3">
+                {items.map((a) => (
+                  <ApplicationCard
+                    key={a.id}
+                    application={a}
+                    dragging={draggingId === a.id}
+                    onDragStart={setDraggingId}
+                  />
+                ))}
+                {items.length === 0 ? (
+                  <p className="px-1 py-6 text-center text-xs text-muted-foreground">
+                    Nothing here yet
+                  </p>
+                ) : null}
+              </div>
             </div>
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+      <LoadMore
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        fetchNextPage={fetchNextPage}
+      />
+    </>
   );
 }
 

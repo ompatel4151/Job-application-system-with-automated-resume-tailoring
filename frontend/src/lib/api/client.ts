@@ -2,15 +2,19 @@
 // proxied server-side to the FastAPI backend (see src/app/api/[...path]).
 // The browser therefore never talks to the backend directly and never sees
 // the backend API key.
+import { listPath, toPage } from "./pages";
 import type {
   ApplicationCreate,
   ApplicationOut,
+  ApplicationPage,
   ApplicationStatus,
   ApplicationUpdate,
   PipelineStats,
   ResumeCreate,
   ResumeOut,
+  ResumePage,
   TailoredResumeOut,
+  TailoredResumePage,
 } from "./types";
 
 export class ApiError extends Error {
@@ -61,9 +65,12 @@ function idempotencyHeader(key?: string): Record<string, string> {
 
 export const api = {
   // Applications
-  listApplications: (status?: ApplicationStatus) =>
-    http<ApplicationOut[]>(
-      `/applications${status ? `?status=${status}` : ""}`,
+  // Lists are cursor-paginated: pass the previous page's next_cursor.
+  listApplications: async (status?: ApplicationStatus, cursor?: string) =>
+    toPage(
+      await http<ApplicationPage | ApplicationOut[]>(
+        listPath("/applications", { status, cursor }),
+      ),
     ),
   getApplication: (id: number) => http<ApplicationOut>(`/applications/${id}`),
   createApplication: (body: ApplicationCreate, idempotencyKey?: string) =>
@@ -82,7 +89,8 @@ export const api = {
   stats: () => http<PipelineStats>(`/applications/stats`),
 
   // Resumes
-  listResumes: () => http<ResumeOut[]>(`/resumes`),
+  listResumes: async (cursor?: string) =>
+    toPage(await http<ResumePage | ResumeOut[]>(listPath("/resumes", { cursor }))),
   createResume: (body: ResumeCreate, idempotencyKey?: string) =>
     http<ResumeOut>(`/resumes`, {
       method: "POST",
@@ -97,6 +105,10 @@ export const api = {
       headers: idempotencyHeader(idempotencyKey),
       body: JSON.stringify({ resume_id: resumeId ?? null }),
     }),
-  listTailored: (applicationId: number) =>
-    http<TailoredResumeOut[]>(`/applications/${applicationId}/tailored`),
+  listTailored: async (applicationId: number, cursor?: string) =>
+    toPage(
+      await http<TailoredResumePage | TailoredResumeOut[]>(
+        listPath(`/applications/${applicationId}/tailored`, { cursor }),
+      ),
+    ),
 };

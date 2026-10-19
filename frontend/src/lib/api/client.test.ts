@@ -13,18 +13,19 @@ function mockFetch(status: number, body: unknown) {
 afterEach(() => vi.restoreAllMocks());
 
 describe("api client", () => {
-  it("calls the app's own /api path and returns parsed JSON", async () => {
-    const spy = mockFetch(200, [{ id: 1 }]);
+  it("calls the app's own /api path and returns the parsed page", async () => {
+    const page = { items: [{ id: 1 }], next_cursor: "c1" };
+    const spy = mockFetch(200, page);
     const result = await api.listApplications();
-    expect(result).toEqual([{ id: 1 }]);
+    expect(result).toEqual(page);
     expect(spy).toHaveBeenCalledWith("/api/applications", expect.any(Object));
   });
 
-  it("passes a status filter as a query param", async () => {
-    const spy = mockFetch(200, []);
-    await api.listApplications("interview");
+  it("passes the status filter and cursor as query params", async () => {
+    const spy = mockFetch(200, { items: [], next_cursor: null });
+    await api.listApplications("interview", "c1");
     expect(spy).toHaveBeenCalledWith(
-      "/api/applications?status=interview",
+      "/api/applications?status=interview&cursor=c1",
       expect.any(Object),
     );
   });

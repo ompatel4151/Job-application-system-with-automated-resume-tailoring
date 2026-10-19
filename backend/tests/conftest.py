@@ -54,6 +54,14 @@ def client():
 
 
 @pytest.fixture()
+def db(client):
+    """A session on the same test database the client uses, for direct setup."""
+    session = TestingSessionLocal()
+    yield session
+    session.close()
+
+
+@pytest.fixture()
 def sample_resume_content():
     return {
         "full_name": "Om Patel",

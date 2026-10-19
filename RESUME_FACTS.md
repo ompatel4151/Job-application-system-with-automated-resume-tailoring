@@ -31,8 +31,17 @@ this yet).
 | On Postgres, with RLS and no `WHERE` clause, a user sees only their own rows. Updating or deleting another user's rows affects 0 rows, and inserting a row for another user fails with "row-level security". | local, Postgres 16 | `tests/test_rls.py` |
 | **Defense in depth, shown by a mutation check.** With the `user_id` filter deleted from the list query, the SQLite API tests failed (2 tests), but the Postgres API test still passed, because RLS blocked the leak on its own. It failed only once the per-request role switch was also turned off. | local | Edited the code, ran `test_auth.py` and `test_rls.py`, then restored from a copy. 1 run each. |
 | Changing the policy to `USING (true)` made 4 of the 5 RLS tests fail. | local, Postgres 16 | Mutation check, restored from a copy. |
-| Tests: backend 137 passed with Postgres (127 run without it). Frontend: 10 Vitest tests and 3 Playwright tests. | local | `TEST_POSTGRES_URL=... pytest`, `npm test`, `E2E_PORT=3107 npm run test:e2e` |
+| Tests: backend 137 passed with Postgres (128 run without it). Frontend: 10 Vitest tests and 3 Playwright tests. | local | `TEST_POSTGRES_URL=... pytest`, `npm test`, `E2E_PORT=3107 npm run test:e2e` |
 
 Not tested: a real sign-up or sign-in against Supabase. That needs an account
 on a remote service, which only you can create. The browser flow from login
 to API call is untested end to end until you sign in on the deployed site.
+
+## Item 3: cursor pagination
+
+| Fact | Where | How |
+|---|---|---|
+| Walking 120 rows 25 at a time gives 5 pages, with every row exactly once and in order. 30 rows with an identical timestamp, 7 per page, are neither skipped nor repeated. | local | `tests/test_pagination.py`, SQLite |
+| Mutation check: dropping the `id` tie-breaker from the cursor comparison made the identical-timestamp test fail. | local | Edited `app/pagination.py`, ran the tests, restored from a copy. |
+| On 200,000 applications (20,000 owned by one user), a cursor page about 5,000 rows deep read **9 shared buffers and 51 rows** (index scan backward on `ix_applications_user_updated`), in **0.09 to 0.12 ms**. The same page by `OFFSET 5000` read **685 buffers and 5,051 rows**, in **1.15 to 1.60 ms**. | local, Postgres 16 | `EXPLAIN (ANALYZE, BUFFERS)`, 3 timing runs each, synthetic data from `generate_series`. Query plan time only, not an HTTP measurement. |
+| Tests: backend 149 passed with Postgres (140 without it). Frontend: 14 Vitest tests and 3 Playwright tests. | local | `pytest`, `npm test`, `E2E_PORT=3107 npm run test:e2e` |

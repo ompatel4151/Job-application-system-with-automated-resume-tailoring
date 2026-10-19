@@ -7,9 +7,11 @@ from app.auth import CurrentUser
 from app.database import get_db, get_owned
 from app.idempotency import IdempotencyKeyHeader
 from app.models import ApplicationStatus, utcnow
+from app.pagination import DEFAULT_LIMIT, Cursor, Limit, paginate
 from app.schemas import (
     ApplicationCreate,
     ApplicationOut,
+    ApplicationPage,
     ApplicationUpdate,
     PipelineStats,
 )
@@ -86,18 +88,25 @@ def create_application(
     return out
 
 
-@router.get("", response_model=list[ApplicationOut])
+@router.get("", response_model=ApplicationPage)
 def list_applications(
     user: CurrentUser,
     status: ApplicationStatus | None = None,
+    limit: Limit = DEFAULT_LIMIT,
+    cursor: Cursor = None,
     db: Session = Depends(get_db),
 ):
+    """Most recently updated first."""
     query = db.query(models.Application).filter(models.Application.user_id == user)
     if status is not None:
         query = query.filter(models.Application.status == status)
-    apps = query.order_by(models.Application.updated_at.desc()).all()
+    apps, next_cursor = paginate(
+        query, models.Application.updated_at, models.Application.id, limit, cursor
+    )
     counts = _tailored_counts(db, [a.id for a in apps])
-    return [_to_out(a, counts.get(a.id, 0)) for a in apps]
+    return ApplicationPage(
+        items=[_to_out(a, counts.get(a.id, 0)) for a in apps], next_cursor=next_cursor
+    )
 
 
 @router.get("/stats", response_model=PipelineStats)

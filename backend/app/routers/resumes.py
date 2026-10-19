@@ -6,7 +6,8 @@ from app.auth import CurrentUser
 from app.database import get_db, get_owned
 from app.idempotency import IdempotencyKeyHeader
 from app.models import utcnow
-from app.schemas import ResumeContent, ResumeCreate, ResumeOut, ResumeUpdate
+from app.pagination import DEFAULT_LIMIT, Cursor, Limit, paginate
+from app.schemas import ResumeContent, ResumeCreate, ResumeOut, ResumePage, ResumeUpdate
 from app.services import extraction
 
 router = APIRouter(prefix="/api/resumes", tags=["resumes"])
@@ -115,13 +116,18 @@ async def parse_resume_file(file: UploadFile = File(...)):
         raise HTTPException(502, str(exc)) from exc
 
 
-@router.get("", response_model=list[ResumeOut])
-def list_resumes(user: CurrentUser, db: Session = Depends(get_db)):
-    return (
-        db.query(models.Resume)
-        .filter(models.Resume.user_id == user)
-        .order_by(models.Resume.created_at.desc())
-        .all()
+@router.get("", response_model=ResumePage)
+def list_resumes(
+    user: CurrentUser,
+    limit: Limit = DEFAULT_LIMIT,
+    cursor: Cursor = None,
+    db: Session = Depends(get_db),
+):
+    """Newest first."""
+    query = db.query(models.Resume).filter(models.Resume.user_id == user)
+    resumes, next_cursor = paginate(query, models.Resume.created_at, models.Resume.id, limit, cursor)
+    return ResumePage(
+        items=[ResumeOut.model_validate(r) for r in resumes], next_cursor=next_cursor
     )
 
 

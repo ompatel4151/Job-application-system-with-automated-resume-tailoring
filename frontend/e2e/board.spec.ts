@@ -31,7 +31,7 @@ test.beforeEach(async ({ page }) => {
     }),
   );
   await page.route("**/api/applications", (route) =>
-    route.fulfill({ json: [application] }),
+    route.fulfill({ json: { items: [application], next_cursor: null } }),
   );
 });
 

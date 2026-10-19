@@ -15,6 +15,10 @@ export type TailoredResumeOut = components["schemas"]["TailoredResumeOut"];
 export type MatchAnalysis = components["schemas"]["MatchAnalysis"];
 export type PipelineStats = components["schemas"]["PipelineStats"];
 
+export type ApplicationPage = components["schemas"]["ApplicationPage"];
+export type ResumePage = components["schemas"]["ResumePage"];
+export type TailoredResumePage = components["schemas"]["TailoredResumePage"];
+
 // The six pipeline stages, in board order.
 export const STATUSES: ApplicationStatus[] = [
   "saved",

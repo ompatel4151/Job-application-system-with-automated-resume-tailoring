@@ -3,12 +3,14 @@
 // TanStack Query hooks over the typed client. Query keys and the invalidation
 // they trigger live here so the screens stay declarative.
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 
 import { api } from "./client";
+import { flattenPages, nextPageParam } from "./pages";
 import type {
   ApplicationCreate,
   ApplicationUpdate,
@@ -23,11 +25,15 @@ export const keys = {
   tailored: (id: number) => ["tailored", id] as const,
 };
 
+// List hooks load pages on demand; `items` is every loaded page as one list.
 export function useApplications() {
-  return useQuery({
+  const query = useInfiniteQuery({
     queryKey: keys.applications,
-    queryFn: () => api.listApplications(),
+    queryFn: ({ pageParam }) => api.listApplications(undefined, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: nextPageParam,
   });
+  return { ...query, items: flattenPages(query.data) };
 }
 
 export function useApplication(id: number) {
@@ -42,14 +48,23 @@ export function useStats(enabled = true) {
 }
 
 export function useResumes() {
-  return useQuery({ queryKey: keys.resumes, queryFn: () => api.listResumes() });
+  const query = useInfiniteQuery({
+    queryKey: keys.resumes,
+    queryFn: ({ pageParam }) => api.listResumes(pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: nextPageParam,
+  });
+  return { ...query, items: flattenPages(query.data) };
 }
 
 export function useTailored(applicationId: number) {
-  return useQuery({
+  const query = useInfiniteQuery({
     queryKey: keys.tailored(applicationId),
-    queryFn: () => api.listTailored(applicationId),
+    queryFn: ({ pageParam }) => api.listTailored(applicationId, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: nextPageParam,
   });
+  return { ...query, items: flattenPages(query.data) };
 }
 
 // A shared invalidation for anything that changes an application.

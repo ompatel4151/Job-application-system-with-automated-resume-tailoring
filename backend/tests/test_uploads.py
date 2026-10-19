@@ -148,7 +148,7 @@ def test_upload_returns_parsed_content(client, fake_parse):
     assert response.status_code == 200
     assert response.json()["full_name"] == "Om Patel"
     # Parsing must not persist anything; the user reviews it first.
-    assert client.get("/api/resumes").json() == []
+    assert client.get("/api/resumes").json()["items"] == []
 
 
 def test_upload_falls_back_to_extension_when_type_is_generic(client, fake_parse):

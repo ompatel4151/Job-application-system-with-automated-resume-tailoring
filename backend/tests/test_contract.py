@@ -84,7 +84,7 @@ def test_list_returns_most_recently_updated_first(client, make_application):
     # Touching the older one moves it to the top.
     client.patch(f"/api/applications/{older['id']}", json={"notes": "touched"})
 
-    companies = [a["company"] for a in client.get("/api/applications").json()]
+    companies = [a["company"] for a in client.get("/api/applications").json()["items"]]
     assert companies == ["Older", "Newer"]
 
 

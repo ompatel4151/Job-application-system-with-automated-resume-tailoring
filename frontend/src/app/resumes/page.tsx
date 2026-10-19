@@ -11,9 +11,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoadMore } from "@/components/load-more";
 
 export default function ResumesPage() {
-  const { data: resumes, isLoading } = useResumes();
+  const {
+    items: resumes,
+    isLoading,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useResumes();
   const create = useCreateResume();
   const [advancedOpen, setAdvancedOpen] = useState(false);
   // Reused if the user retries after an error; replaced after success.
@@ -82,7 +89,7 @@ export default function ResumesPage() {
         </h2>
         {isLoading ? (
           <Skeleton className="h-12 w-full" />
-        ) : resumes && resumes.length > 0 ? (
+        ) : resumes.length > 0 ? (
           <ul className="space-y-2">
             {resumes.map((r) => (
               <li
@@ -103,6 +110,11 @@ export default function ResumesPage() {
             No resumes yet. Add one below.
           </p>
         )}
+        <LoadMore
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          fetchNextPage={fetchNextPage}
+        />
       </section>
 
       <form

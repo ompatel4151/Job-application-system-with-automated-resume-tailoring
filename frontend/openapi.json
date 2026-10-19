@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Job Application Tracker",
-    "description": "Track job applications and generate resumes tailored to each job description with Claude.",
+    "description": "Track job applications and generate resumes tailored to each job description with an LLM. Every /api route needs a Supabase access token.",
     "version": "0.1.0"
   },
   "paths": {
@@ -70,18 +70,56 @@
           "resumes"
         ],
         "summary": "List Resumes",
+        "description": "Newest first.",
         "operationId": "list_resumes_api_resumes_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ResumeOut"
-                  },
-                  "title": "Response List Resumes Api Resumes Get"
+                  "$ref": "#/components/schemas/ResumePage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -320,6 +358,7 @@
           "applications"
         ],
         "summary": "List Applications",
+        "description": "Most recently updated first.",
         "operationId": "list_applications_api_applications_get",
         "parameters": [
           {
@@ -337,6 +376,35 @@
               ],
               "title": "Status"
             }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
           }
         ],
         "responses": {
@@ -345,11 +413,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ApplicationOut"
-                  },
-                  "title": "Response List Applications Api Applications Get"
+                  "$ref": "#/components/schemas/ApplicationPage"
                 }
               }
             }
@@ -588,6 +652,7 @@
           "tailoring"
         ],
         "summary": "List Tailored",
+        "description": "Newest first.",
         "operationId": "list_tailored_api_applications__application_id__tailored_get",
         "parameters": [
           {
@@ -598,6 +663,35 @@
               "type": "integer",
               "title": "Application Id"
             }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
           }
         ],
         "responses": {
@@ -606,11 +700,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TailoredResumeOut"
-                  },
-                  "title": "Response List Tailored Api Applications  Application Id  Tailored Get"
+                  "$ref": "#/components/schemas/TailoredResumePage"
                 }
               }
             }
@@ -888,6 +978,34 @@
           "updated_at"
         ],
         "title": "ApplicationOut"
+      },
+      "ApplicationPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicationOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "ApplicationPage"
       },
       "ApplicationStatus": {
         "type": "string",
@@ -1277,6 +1395,34 @@
         ],
         "title": "ResumeOut"
       },
+      "ResumePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ResumeOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "ResumePage"
+      },
       "ResumeUpdate": {
         "properties": {
           "name": {
@@ -1375,6 +1521,34 @@
           "created_at"
         ],
         "title": "TailoredResumeOut"
+      },
+      "TailoredResumePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TailoredResumeOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "TailoredResumePage"
       },
       "ValidationError": {
         "properties": {

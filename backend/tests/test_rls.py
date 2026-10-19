@@ -119,8 +119,8 @@ def test_the_api_on_postgres_keeps_users_apart(pg):
             assert created.status_code == 201
             new_id = created.json()["id"]
 
-            a_list = c.get("/api/applications", headers=as_a).json()
-            b_list = c.get("/api/applications", headers=as_b).json()
+            a_list = c.get("/api/applications", headers=as_a).json()["items"]
+            b_list = c.get("/api/applications", headers=as_b).json()["items"]
             assert sorted(a["company"] for a in a_list) == ["A Corp", "Via API"]
             assert [a["company"] for a in b_list] == ["B Corp"]
             assert c.get(f"/api/applications/{new_id}", headers=as_b).status_code == 404

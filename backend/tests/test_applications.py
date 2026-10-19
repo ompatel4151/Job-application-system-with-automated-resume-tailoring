@@ -56,10 +56,10 @@ def test_filter_by_status(client, make_application):
     make_application(company="B", status="applied")
 
     resp = client.get("/api/applications", params={"status": "applied"})
-    assert [a["company"] for a in resp.json()] == ["B"]
+    assert [a["company"] for a in resp.json()["items"]] == ["B"]
 
     resp = client.get("/api/applications")
-    assert len(resp.json()) == 2
+    assert len(resp.json()["items"]) == 2
 
 
 def test_stats(client, make_application):
