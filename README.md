@@ -336,16 +336,16 @@ the same retry as before for a database that is still waking up.
   never been applied, so nothing about it has been tested against real AWS.
 - One instance with no autoscaling, on Render's free tier, which sleeps when
   idle.
-
-- Nothing scrapes `/metrics` on a schedule, so there are no dashboards or
-  alerts yet. A free hosted Prometheus (such as Grafana Cloud's free tier)
-  could scrape it.
-
 - Sign-up is open, so anyone can make an account and spend up to 5 LLM calls
   a minute. Requests without a valid token aren't rate-limited, but they're
   refused before any database or LLM work.
 - Each rate-limit check is a round trip to Redis. Its latency against a
   hosted Redis (Upstash) hasn't been measured.
+- Nothing scrapes `/metrics` on a schedule, so there are no dashboards or
+  alerts yet. A free hosted Prometheus (such as Grafana Cloud's free tier)
+  could scrape it.
+- The sign-in flow is covered by unit and page tests only. No test runs a
+  real sign-up against Supabase.
 
 ## Deployment
 
