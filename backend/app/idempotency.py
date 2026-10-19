@@ -36,10 +36,11 @@ def fingerprint(method: str, path: str, body: dict) -> str:
 
 
 def claim(
-    db: Session, key: str | None, method: str, path: str, body: dict
+    db: Session, user_id, key: str | None, method: str, path: str, body: dict
 ) -> tuple[models.IdempotencyKey | None, JSONResponse | None]:
     """Reserve `key` for this request, or return the stored response for a retry.
 
+    Keys are per user: the same key from two users is two separate requests.
     Returns (row, None) when the caller should do the work and then `save`,
     (None, response) when this is a retry and `response` should be returned,
     and (None, None) when no key was sent.
@@ -49,7 +50,7 @@ def claim(
         return None, None
 
     fp = fingerprint(method, path, body)
-    row = models.IdempotencyKey(key=key, fingerprint=fp)
+    row = models.IdempotencyKey(user_id=user_id, key=key, fingerprint=fp)
     db.add(row)
     try:
         db.flush()  # INSERT now, so a duplicate key fails here, before any work
@@ -57,7 +58,7 @@ def claim(
     except IntegrityError:
         db.rollback()
 
-    existing = db.get(models.IdempotencyKey, key)
+    existing = db.get(models.IdempotencyKey, (user_id, key))
     if existing is None:
         # The other request holding this key failed and rolled back meanwhile.
         raise HTTPException(409, "A request with this Idempotency-Key is in progress. Retry.")

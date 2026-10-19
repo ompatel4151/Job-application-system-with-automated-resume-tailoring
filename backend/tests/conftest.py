@@ -4,11 +4,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app import ratelimit
+from app import auth, ratelimit
+from app.config import settings
 from app.database import Base, get_db
 from app.main import app
 from app.schemas import MatchAnalysis, ResumeContent
 from app.services.tailoring import TailoringResult
+from tests.tokens import SIGNING_KEY, SUPABASE_URL, USER_A, auth_header
 
 engine = create_engine(
     "sqlite://",
@@ -16,6 +18,15 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+@pytest.fixture(autouse=True)
+def _test_auth(monkeypatch):
+    """Point token verification at the test key, never at the network."""
+    monkeypatch.setattr(settings, "supabase_url", SUPABASE_URL)
+    monkeypatch.setattr(auth, "_signing_key", lambda token: SIGNING_KEY.public_key())
+    # The test database is built below with create_all; don't migrate the dev DB.
+    monkeypatch.setattr("app.main.migrate", lambda: None)
 
 
 @pytest.fixture(autouse=True)
@@ -36,7 +47,7 @@ def client():
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as c:
+    with TestClient(app, headers=auth_header(USER_A)) as c:
         yield c
     app.dependency_overrides.clear()
     Base.metadata.drop_all(bind=engine)

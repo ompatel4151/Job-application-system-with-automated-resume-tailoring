@@ -1,7 +1,9 @@
+import json
 from pathlib import Path
 
-from sqlalchemy import create_engine, inspect
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from fastapi import HTTPException, Request
+from sqlalchemy import create_engine, event, inspect, text
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import settings
 
@@ -39,12 +41,45 @@ class Base(DeclarativeBase):
     pass
 
 
-def get_db():
-    db = SessionLocal()
+def get_db(request: Request):
+    # The auth middleware has set the caller; RLS below runs as them.
+    db = SessionLocal(info={"user_id": getattr(request.state, "user_id", None)})
     try:
         yield db
     finally:
         db.close()
+
+
+@event.listens_for(Session, "after_begin")
+def _act_as_user(session, transaction, connection):
+    """Run every transaction as the signed-in user, so Postgres RLS applies.
+
+    The backend connects as the tables' owner, which RLS ignores. Switching to
+    the `authenticated` role with the user's claims (what Supabase's own API
+    does) means a query that forgets its user_id filter still can't reach
+    another user's rows. Both settings are transaction-local, so a pooled
+    connection never carries them into the next request.
+    """
+    user_id = session.info.get("user_id")
+    if user_id is None or connection.dialect.name != "postgresql":
+        return
+    claims = json.dumps({"sub": str(user_id), "role": "authenticated"})
+    connection.execute(
+        text(
+            "SELECT set_config('role', 'authenticated', true), "
+            "set_config('request.jwt.claims', :claims, true)"
+        ),
+        {"claims": claims},
+    )
+
+
+def get_owned(db: Session, model, row_id, user_id, name: str):
+    """The row if it exists and belongs to user_id, else 404 either way, so an
+    id that belongs to someone else looks exactly like one that doesn't exist."""
+    row = db.get(model, row_id)
+    if row is None or row.user_id != user_id:
+        raise HTTPException(404, f"{name} not found")
+    return row
 
 
 def alembic_config(url: str | None = None):

@@ -1,7 +1,8 @@
 import enum
+import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Index, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -22,8 +23,13 @@ class ApplicationStatus(str, enum.Enum):
 
 class Resume(Base):
     __tablename__ = "resumes"
+    # Lists are "my resumes, newest first".
+    __table_args__ = (Index("ix_resumes_user_created", "user_id", "created_at", "id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # The Supabase user who owns the row (the token's sub). No foreign key to
+    # auth.users, so the schema doesn't depend on Supabase's own tables.
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     is_default: Mapped[bool] = mapped_column(default=False)
     # Structured resume content: summary, skills, experience, projects, education
@@ -40,8 +46,13 @@ class Resume(Base):
 
 class Application(Base):
     __tablename__ = "applications"
+    # The board is "my applications, most recently updated first".
+    __table_args__ = (Index("ix_applications_user_updated", "user_id", "updated_at", "id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # The Supabase user who owns the row (the token's sub). No foreign key to
+    # auth.users, so the schema doesn't depend on Supabase's own tables.
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     company: Mapped[str] = mapped_column(String(200), nullable=False)
     role: Mapped[str] = mapped_column(String(200), nullable=False)
     status: Mapped[ApplicationStatus] = mapped_column(
@@ -65,6 +76,8 @@ class TailoredResume(Base):
     __tablename__ = "tailored_resumes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Same owner as its application; stored so RLS can check it directly.
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     # Indexed: Postgres doesn't index foreign keys on its own, and the detail
     # page and tailored list look rows up by application. Without it, each
     # lookup scanned the whole table (measured in RESULTS.md, milestone 6).
@@ -88,7 +101,9 @@ class IdempotencyKey(Base):
 
     __tablename__ = "idempotency_keys"
 
-    # Primary key = unique: two requests can never both claim the same key.
+    # (user, key) is the primary key: two requests can never both claim the same
+    # key, and one user's key can never replay another user's response.
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
     key: Mapped[str] = mapped_column(String(255), primary_key=True)
     # Hash of method + path + body, to catch a key reused for a different request.
     fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)

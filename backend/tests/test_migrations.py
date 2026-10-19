@@ -12,7 +12,7 @@ from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 from sqlalchemy import create_engine, inspect, text
 
-from app.database import Base, _normalize, alembic_config, migrate
+from app.database import BASELINE, Base, _normalize, alembic_config, migrate
 
 PG_URL = os.environ.get("TEST_POSTGRES_URL")
 TABLES = {"applications", "resumes", "tailored_resumes", "idempotency_keys"}
@@ -73,8 +73,11 @@ def test_downgrade_then_upgrade_round_trips(db_url):
 def test_a_database_built_before_migrations_is_adopted(db_url):
     """The live database was made by create_all and has no alembic_version.
     Upgrading it must not try to create tables that already exist."""
+    # Rebuild that state: the baseline schema with no version table.
+    command.upgrade(alembic_config(db_url), BASELINE)
     engine = create_engine(_normalize(db_url))
-    Base.metadata.create_all(engine)
+    with engine.begin() as conn:
+        conn.execute(text("DROP TABLE alembic_version"))
     engine.dispose()
 
     migrate(db_url)  # would raise "table already exists" without adoption

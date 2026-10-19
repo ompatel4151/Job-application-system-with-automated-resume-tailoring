@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.config import settings
 from app.main import app
+from tests.tokens import auth_header
 
 VALID = {"company": "Acme", "role": "SWE"}
 
@@ -98,7 +99,7 @@ def test_unexpected_errors_return_a_generic_500(client, monkeypatch):
     monkeypatch.setattr("app.routers.applications._tailored_counts", boom)
     # The `client` fixture installs the in-memory DB. This second client just
     # turns off re-raising, so we see the 500 response the user would get.
-    raw = TestClient(app, raise_server_exceptions=False)
+    raw = TestClient(app, raise_server_exceptions=False, headers=auth_header())
     resp = raw.get("/api/applications")
 
     assert resp.status_code == 500

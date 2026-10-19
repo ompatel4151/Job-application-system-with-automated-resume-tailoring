@@ -37,8 +37,8 @@ export function useApplication(id: number) {
   });
 }
 
-export function useStats() {
-  return useQuery({ queryKey: keys.stats, queryFn: () => api.stats() });
+export function useStats(enabled = true) {
+  return useQuery({ queryKey: keys.stats, queryFn: () => api.stats(), enabled });
 }
 
 export function useResumes() {

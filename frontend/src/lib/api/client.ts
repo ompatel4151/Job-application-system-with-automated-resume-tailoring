@@ -30,6 +30,14 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
     cache: "no-store",
   });
 
+  // Session expired or signed out in another tab: back to the sign-in page.
+  if (res.status === 401 && typeof window !== "undefined") {
+    // A full reload on purpose: this helper runs outside React, and the reload
+    // drops every cached query from the old session.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign("/login");
+  }
+
   if (!res.ok) {
     let detail = res.statusText;
     try {

@@ -1,6 +1,6 @@
-"""Per-client rate limiting with token buckets.
+"""Per-user rate limiting with token buckets.
 
-Each client has a bucket that holds up to `capacity` tokens and refills at a
+Each user has a bucket that holds up to `capacity` tokens and refills at a
 steady rate. A request spends one token. If the bucket is empty, the request
 gets a 429 with Retry-After saying when the next token arrives. Short bursts
 up to `capacity` are allowed, but the long-run average can't exceed the
@@ -66,15 +66,14 @@ _LLM_ROUTE = re.compile(r"^/api/(applications/\d+/tailor|resumes/parse)$")
 
 
 def client_id(request: Request) -> str:
-    """Who is calling: the connecting IP, or the end user's IP behind our proxy."""
-    forwarded = request.headers.get("x-forwarded-for")
-    if (
-        forwarded
-        and settings.trust_forwarded_for
-        # Anyone can send X-Forwarded-For. Only our proxy has the key.
-        and settings.api_key_matches(request.headers.get("x-api-key"))
-    ):
-        return forwarded.split(",")[0].strip()
+    """Who is calling: the signed-in user (set by the auth middleware).
+
+    Every /api request has one by the time it gets here. The IP fallback only
+    applies if this is ever called without auth in front of it.
+    """
+    user_id = getattr(request.state, "user_id", None)
+    if user_id is not None:
+        return str(user_id)
     return request.client.host if request.client else "unknown"
 
 

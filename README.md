@@ -35,43 +35,47 @@ recommendations.
   recommendations (what to learn, what to address in a cover letter).
 - **Markdown export.** Download any tailored resume as a Markdown document,
   ready to convert to PDF.
-- **Web dashboard.** A zero-build single-page dashboard served by the API,
-  plus interactive OpenAPI docs at `/docs`.
+- **Accounts.** Sign in with email and password (Supabase Auth). Each user only
+  ever sees their own applications and resumes.
+- **API docs.** Interactive OpenAPI docs at `/docs` on the backend.
 
 ## Architecture
 
 Two services in one repo. The browser talks only to the Next.js frontend, which
-proxies API calls server-side to the FastAPI backend (attaching the API key), so
-the key never reaches the browser and there is no CORS to manage.
+proxies API calls server-side to the FastAPI backend, attaching the API key and
+the signed-in user's access token. Neither reaches client-side code, and there
+is no CORS to manage.
 
 ```
 backend/                 # FastAPI service
 ├── app/
-│   ├── main.py          # app, router wiring, CORS, API-key gate
+│   ├── main.py          # app, router wiring, CORS, auth and rate-limit middleware
+│   ├── auth.py          # verifies Supabase access tokens (ES256, JWKS)
 │   ├── config.py        # environment-based settings
-│   ├── database.py      # SQLAlchemy engine / session
+│   ├── database.py      # engine, sessions (run as the user for RLS), migrate()
 │   ├── models.py        # ORM: Resume, Application, TailoredResume
 │   ├── schemas.py       # Pydantic request/response schemas
 │   ├── routers/         # applications, resumes, tailoring
-│   ├── services/        # tailoring + upload extraction (Claude / Groq)
-│   └── static/          # legacy vanilla-JS dashboard (still served at /)
+│   └── services/        # tailoring + upload extraction (Claude / Groq)
+├── migrations/          # Alembic migrations
 ├── tests/               # pytest suite (API + service layer, model mocked)
 └── Dockerfile
 frontend/                # Next.js App Router (TypeScript, Tailwind, shadcn/ui)
-├── src/app/             # board, application detail, tailor, base-resume pages
+├── src/app/             # board, application detail, tailor, base-resume, login
 │   └── api/[...path]/   # server-side proxy to the backend
+├── src/proxy.ts         # refreshes the session, sends signed-out visitors to /login
 ├── src/lib/api/         # OpenAPI-generated types, typed client, Query hooks
-├── e2e/                 # Playwright smoke test
+├── e2e/                 # Playwright smoke tests
 └── Dockerfile
 docker-compose.yml       # db + backend + frontend for local dev
-.github/workflows/       # CI (tests) and Deploy (Cloud Run)
+.github/workflows/       # CI (tests)
 ```
 
 **Backend:** Python 3.11 · FastAPI · SQLAlchemy 2.0 · Pydantic v2 · SQLite or
 Postgres · Anthropic and OpenAI SDKs · pypdf · pytest
 **Frontend:** Next.js · React · TypeScript · Tailwind · TanStack Query ·
 Vitest · Playwright
-**Infra:** Docker · GitHub Actions · Cloud Run · Supabase Postgres
+**Infra:** Docker · GitHub Actions · Vercel · Render · Supabase (Postgres, Auth)
 
 Key design decisions:
 
@@ -96,8 +100,10 @@ docker compose up --build
 ```
 
 Then open <http://localhost:3000> for the app. Tailoring needs an LLM key; set
-`GROQ_API_KEY` (free) in your shell or a `.env` file before bringing it up. To
-require a key on the API, set `API_KEY` too and it is applied to both services.
+`GROQ_API_KEY` (free) in your shell or a `.env` file before bringing it up.
+Signing in needs a Supabase project: set `SUPABASE_URL` and
+`SUPABASE_PUBLISHABLE_KEY` (Project Settings, then API Keys). To require a key
+between proxy and API, set `API_KEY` too and it is applied to both services.
 
 ### Running the services directly
 
@@ -243,13 +249,25 @@ Every error has the same shape:
 422s include `errors`. Unexpected failures return a generic 500 and are
 logged; internals aren't sent to the client.
 
-**Requests are rate-limited** per client with token buckets: 5 per minute
+**Every request is signed in, and users are kept apart twice.**
+
+- The backend verifies the Supabase access token on every `/api` request: its
+  ES256 signature against the project's published keys, expiry, audience and
+  issuer. Without a valid one it returns 401. If `SUPABASE_URL` is unset,
+  every `/api` request is refused rather than left open.
+- Every query is filtered by the caller's user id. Someone else's row returns
+  404, the same as a row that doesn't exist.
+- Row-level security is the second layer. The backend runs each transaction
+  as Supabase's `authenticated` role with the caller's id, so a policy
+  (`user_id = auth.uid()`) filters every table even if a query forgot its
+  filter. A test that deletes a filter shows the policy still holding.
+- Idempotency keys are per user, so one user's key can't replay another
+  user's stored response.
+
+**Requests are rate-limited** per user with token buckets: 5 per minute
 for the two LLM endpoints and 60 per minute for everything else, in separate
 buckets. Over the limit you get a 429 with `Retry-After`.
 
-- Behind the frontend proxy, set `TRUST_FORWARDED_FOR=true` so each visitor
-  is limited separately. The forwarded IP is only trusted on requests that
-  carry the API key.
 - Limits live in memory, so they are per server process and reset on
   restart.
 
@@ -279,9 +297,9 @@ the same retry as before for a database that is still waking up.
 
 **Known limitations.**
 
-- There are no user accounts. Anyone who can load the frontend can use the
-  whole API through its proxy (AUDIT #1). Rate limiting reduces the damage;
-  real auth is the fix.
+- Sign-up is open, so anyone can make an account and spend up to 5 LLM calls
+  a minute. Requests without a valid token aren't rate-limited, but they're
+  refused before any database or LLM work.
 - Rate limits aren't shared across servers.
 - List endpoints aren't paginated. The full board list is now the slowest
   endpoint in the load test.

@@ -2,16 +2,15 @@ import logging
 import math
 import time
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from sqlalchemy.exc import OperationalError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app import ratelimit
+from app import auth, ratelimit
 from app.config import settings
 from app.database import migrate
 from app.routers import applications, resumes, tailoring
@@ -75,7 +74,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Job Application Tracker",
     description="Track job applications and generate resumes tailored to each "
-    "job description with Claude.",
+    "job description with an LLM. Every /api route needs a Supabase access token.",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -89,25 +88,8 @@ app.add_middleware(
 )
 
 
-@app.middleware("http")
-async def require_api_key(request: Request, call_next):
-    """Gate /api routes behind a shared key when one is configured.
-
-    Disabled entirely when API_KEY is unset, so local dev and the test suite
-    stay open. Preflight OPTIONS requests are never gated, or CORS would break.
-    """
-    if (
-        settings.api_key
-        and request.url.path.startswith("/api")
-        and request.method != "OPTIONS"
-        and not settings.api_key_matches(request.headers.get("x-api-key"))
-    ):
-        return error_response(401, "Invalid or missing API key.")
-    return await call_next(request)
-
-
-# Registered after require_api_key, so it wraps it and runs first: a flood is
-# turned away before any other work happens.
+# Registered first, so it runs second (Starlette runs the last-added middleware
+# first): it needs the user id that authenticate sets.
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
     wait = ratelimit.retry_after(request)
@@ -118,6 +100,20 @@ async def rate_limit(request: Request, call_next):
             f"Too many requests. Try again in {seconds} second{'' if seconds == 1 else 's'}.",
             headers={"Retry-After": str(seconds)},
         )
+    return await call_next(request)
+
+
+@app.middleware("http")
+async def authenticate(request: Request, call_next):
+    """Every /api request needs the proxy's API key (when one is set) and a
+    signed-in user's token. Preflight OPTIONS requests pass, or CORS breaks."""
+    if request.url.path.startswith("/api") and request.method != "OPTIONS":
+        if settings.api_key and not settings.api_key_matches(request.headers.get("x-api-key")):
+            return error_response(401, "Invalid or missing API key.")
+        try:
+            request.state.user_id = auth.user_id_from(request.headers.get("authorization"))
+        except auth.Unauthorized as exc:
+            return error_response(401, str(exc))
     return await call_next(request)
 
 
@@ -151,14 +147,6 @@ async def unhandled_error(request: Request, exc: Exception):
 app.include_router(resumes.router)
 app.include_router(applications.router)
 app.include_router(tailoring.router)
-
-STATIC_DIR = Path(__file__).parent / "static"
-
-
-@app.get("/", include_in_schema=False)
-def dashboard():
-    return FileResponse(STATIC_DIR / "index.html")
-
 
 @app.get("/health", tags=["meta"])
 def health():

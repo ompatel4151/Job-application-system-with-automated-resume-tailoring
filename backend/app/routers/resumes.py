@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from app import idempotency, models
-from app.database import get_db
+from app.auth import CurrentUser
+from app.database import get_db, get_owned
 from app.idempotency import IdempotencyKeyHeader
 from app.models import utcnow
 from app.schemas import ResumeContent, ResumeCreate, ResumeOut, ResumeUpdate
@@ -11,10 +12,12 @@ from app.services import extraction
 router = APIRouter(prefix="/api/resumes", tags=["resumes"])
 
 
-def _clear_default(db: Session) -> None:
+def _clear_default(db: Session, user) -> None:
     # A bulk UPDATE bypasses the ORM's onupdate hook, so bump updated_at by hand.
     # Without this, a demoted resume keeps a stale timestamp.
-    db.query(models.Resume).filter(models.Resume.is_default.is_(True)).update(
+    db.query(models.Resume).filter(
+        models.Resume.user_id == user, models.Resume.is_default.is_(True)
+    ).update(
         {"is_default": False, "updated_at": utcnow()}, synchronize_session=False
     )
 
@@ -23,18 +26,21 @@ def _clear_default(db: Session) -> None:
 def create_resume(
     payload: ResumeCreate,
     request: Request,
+    user: CurrentUser,
     idempotency_key: IdempotencyKeyHeader = None,
     db: Session = Depends(get_db),
 ):
     row, replay = idempotency.claim(
-        db, idempotency_key, request.method, request.url.path, payload.model_dump(mode="json")
+        db, user, idempotency_key, request.method, request.url.path,
+        payload.model_dump(mode="json"),
     )
     if replay is not None:
         return replay
 
     if payload.is_default:
-        _clear_default(db)
+        _clear_default(db, user)
     resume = models.Resume(
+        user_id=user,
         name=payload.name,
         is_default=payload.is_default,
         content=payload.content.model_dump(),
@@ -110,28 +116,30 @@ async def parse_resume_file(file: UploadFile = File(...)):
 
 
 @router.get("", response_model=list[ResumeOut])
-def list_resumes(db: Session = Depends(get_db)):
-    return db.query(models.Resume).order_by(models.Resume.created_at.desc()).all()
+def list_resumes(user: CurrentUser, db: Session = Depends(get_db)):
+    return (
+        db.query(models.Resume)
+        .filter(models.Resume.user_id == user)
+        .order_by(models.Resume.created_at.desc())
+        .all()
+    )
 
 
 @router.get("/{resume_id}", response_model=ResumeOut)
-def get_resume(resume_id: int, db: Session = Depends(get_db)):
-    resume = db.get(models.Resume, resume_id)
-    if not resume:
-        raise HTTPException(404, "Resume not found")
-    return resume
+def get_resume(resume_id: int, user: CurrentUser, db: Session = Depends(get_db)):
+    return get_owned(db, models.Resume, resume_id, user, "Resume")
 
 
 @router.put("/{resume_id}", response_model=ResumeOut)
-def update_resume(resume_id: int, payload: ResumeUpdate, db: Session = Depends(get_db)):
-    resume = db.get(models.Resume, resume_id)
-    if not resume:
-        raise HTTPException(404, "Resume not found")
+def update_resume(
+    resume_id: int, payload: ResumeUpdate, user: CurrentUser, db: Session = Depends(get_db)
+):
+    resume = get_owned(db, models.Resume, resume_id, user, "Resume")
     if payload.name is not None:
         resume.name = payload.name
     if payload.is_default is not None:
         if payload.is_default:
-            _clear_default(db)
+            _clear_default(db, user)
         resume.is_default = payload.is_default
     if payload.content is not None:
         resume.content = payload.content.model_dump()
@@ -141,9 +149,7 @@ def update_resume(resume_id: int, payload: ResumeUpdate, db: Session = Depends(g
 
 
 @router.delete("/{resume_id}", status_code=204)
-def delete_resume(resume_id: int, db: Session = Depends(get_db)):
-    resume = db.get(models.Resume, resume_id)
-    if not resume:
-        raise HTTPException(404, "Resume not found")
+def delete_resume(resume_id: int, user: CurrentUser, db: Session = Depends(get_db)):
+    resume = get_owned(db, models.Resume, resume_id, user, "Resume")
     db.delete(resume)
     db.commit()

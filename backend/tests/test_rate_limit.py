@@ -123,28 +123,9 @@ def test_health_is_never_limited(client, tiny_api_bucket):
     assert client.get("/health").status_code == 200
 
 
-def test_forwarded_ip_is_trusted_from_the_authenticated_proxy(
-    client, tiny_api_bucket, monkeypatch
-):
-    """Behind our proxy, each end user gets their own bucket."""
-    monkeypatch.setattr(settings, "api_key", "s3cret")
-    monkeypatch.setattr(settings, "trust_forwarded_for", True)
-
-    def get(ip):
-        headers = {"X-API-Key": "s3cret", "X-Forwarded-For": ip}
-        return client.get("/api/applications", headers=headers).status_code
-
-    assert get("1.1.1.1") == 200
-    assert get("2.2.2.2") == 200  # a different user, their own bucket
-    assert get("1.1.1.1") == 429
-
-
-def test_spoofed_forwarded_ip_is_ignored_without_the_key(
-    client, tiny_api_bucket, monkeypatch
-):
-    """A caller can't get a fresh bucket by inventing a new X-Forwarded-For."""
-    monkeypatch.setattr(settings, "trust_forwarded_for", True)
-
+def test_a_forged_forwarded_ip_does_not_give_a_fresh_bucket(client, tiny_api_bucket):
+    """Buckets belong to the signed-in user, so inventing a new
+    X-Forwarded-For (or a new IP) doesn't reset the limit."""
     client.get("/api/applications", headers={"X-Forwarded-For": "1.1.1.1"})
     resp = client.get("/api/applications", headers={"X-Forwarded-For": "9.9.9.9"})
 

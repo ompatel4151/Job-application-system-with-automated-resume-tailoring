@@ -19,22 +19,24 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./job_tracker.db"
 
-    # Access control for /api routes. When api_key is set, every /api request
-    # must send it as X-API-Key; when unset (local dev, tests) the API is open.
-    # The frontend keeps this server-side and never exposes it to the browser.
+    # Shared secret between the frontend proxy and the API. When set, every
+    # /api request must also send it as X-API-Key, so only the proxy can call
+    # the API. The frontend keeps it server-side, never in the browser.
     api_key: str | None = None
+
+    # The Supabase project whose access tokens the API accepts, e.g.
+    # https://<ref>.supabase.co. Every /api request needs a token from it;
+    # unset means every /api request is refused (fail closed).
+    supabase_url: str | None = None
 
     # Browser origins allowed to call the API directly (comma-separated). The
     # frontend normally proxies server-side, so this mainly matters for local
     # tools and the API docs.
     cors_origins: str = "http://localhost:3000"
 
-    # Per-client rate limits on /api (see app/ratelimit.py). Off only for local
+    # Per-user rate limits on /api (see app/ratelimit.py). Off only for local
     # experiments such as load testing.
     rate_limit_enabled: bool = True
-    # Use X-Forwarded-For as the client identity. Only trusted on requests that
-    # carry the valid API key, i.e. requests from our own frontend proxy.
-    trust_forwarded_for: bool = False
 
     # Which LLM backend to tailor with. "auto" picks Claude when an Anthropic
     # key is present, otherwise Groq, so setting a single key is enough.

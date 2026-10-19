@@ -29,3 +29,6 @@ services:
         sync: false
       - key: LLM_PROVIDER
         value: auto
+      # https://<ref>.supabase.co; the API only accepts this project's tokens.
+      - key: SUPABASE_URL
+        sync: false

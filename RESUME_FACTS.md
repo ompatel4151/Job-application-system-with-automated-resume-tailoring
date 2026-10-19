@@ -20,3 +20,19 @@ Python 3.11.15, `postgres:16-alpine` in Docker.
 
 Not measured: how long migrations take on the live database (no live deploy of
 this yet).
+
+## Item 2: accounts (Supabase Auth, RLS)
+
+| Fact | Where | How |
+|---|---|---|
+| Every `/api` endpoint returns 401 without a valid token. Tested cases: no token, garbage, Basic auth, expired, wrong audience, wrong issuer, missing or non-UUID `sub`, a token signed by another key, and `alg: none`. | local | `tests/test_auth.py` (parametrized), SQLite |
+| The backend fetches the live project's real ES256 public key (JWKS) and rejects a token forged with the real key id, with `InvalidSignatureError`. | local backend, live Supabase JWKS | A one-off script calling `app.auth` with `SUPABASE_URL` set to the project. 1 run. |
+| User B gets 404 on every one of user A's rows, across the get, patch, put, delete, tailor, tailored-list and markdown endpoints, and B's lists and stats are empty. | local | `tests/test_auth.py`, SQLite |
+| On Postgres, with RLS and no `WHERE` clause, a user sees only their own rows. Updating or deleting another user's rows affects 0 rows, and inserting a row for another user fails with "row-level security". | local, Postgres 16 | `tests/test_rls.py` |
+| **Defense in depth, shown by a mutation check.** With the `user_id` filter deleted from the list query, the SQLite API tests failed (2 tests), but the Postgres API test still passed, because RLS blocked the leak on its own. It failed only once the per-request role switch was also turned off. | local | Edited the code, ran `test_auth.py` and `test_rls.py`, then restored from a copy. 1 run each. |
+| Changing the policy to `USING (true)` made 4 of the 5 RLS tests fail. | local, Postgres 16 | Mutation check, restored from a copy. |
+| Tests: backend 137 passed with Postgres (127 run without it). Frontend: 10 Vitest tests and 3 Playwright tests. | local | `TEST_POSTGRES_URL=... pytest`, `npm test`, `E2E_PORT=3107 npm run test:e2e` |
+
+Not tested: a real sign-up or sign-in against Supabase. That needs an account
+on a remote service, which only you can create. The browser flow from login
+to API call is untested end to end until you sign in on the deployed site.

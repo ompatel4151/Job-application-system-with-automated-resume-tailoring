@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app import idempotency, models
-from app.database import get_db
+from app.auth import CurrentUser
+from app.database import get_db, get_owned
 from app.idempotency import IdempotencyKeyHeader
 from app.models import ApplicationStatus, utcnow
 from app.schemas import (
@@ -63,16 +64,18 @@ def _tailored_count(db: Session, application_id: int) -> int:
 def create_application(
     payload: ApplicationCreate,
     request: Request,
+    user: CurrentUser,
     idempotency_key: IdempotencyKeyHeader = None,
     db: Session = Depends(get_db),
 ):
     row, replay = idempotency.claim(
-        db, idempotency_key, request.method, request.url.path, payload.model_dump(mode="json")
+        db, user, idempotency_key, request.method, request.url.path,
+        payload.model_dump(mode="json"),
     )
     if replay is not None:
         return replay
 
-    application = models.Application(**payload.model_dump())
+    application = models.Application(**payload.model_dump(), user_id=user)
     if application.status in APPLIED_STAGES:
         application.applied_at = utcnow()
     db.add(application)
@@ -85,9 +88,11 @@ def create_application(
 
 @router.get("", response_model=list[ApplicationOut])
 def list_applications(
-    status: ApplicationStatus | None = None, db: Session = Depends(get_db)
+    user: CurrentUser,
+    status: ApplicationStatus | None = None,
+    db: Session = Depends(get_db),
 ):
-    query = db.query(models.Application)
+    query = db.query(models.Application).filter(models.Application.user_id == user)
     if status is not None:
         query = query.filter(models.Application.status == status)
     apps = query.order_by(models.Application.updated_at.desc()).all()
@@ -96,9 +101,10 @@ def list_applications(
 
 
 @router.get("/stats", response_model=PipelineStats)
-def pipeline_stats(db: Session = Depends(get_db)):
+def pipeline_stats(user: CurrentUser, db: Session = Depends(get_db)):
     rows = (
         db.query(models.Application.status, func.count(models.Application.id))
+        .filter(models.Application.user_id == user)
         .group_by(models.Application.status)
         .all()
     )
@@ -111,20 +117,19 @@ def pipeline_stats(db: Session = Depends(get_db)):
 
 
 @router.get("/{application_id}", response_model=ApplicationOut)
-def get_application(application_id: int, db: Session = Depends(get_db)):
-    application = db.get(models.Application, application_id)
-    if not application:
-        raise HTTPException(404, "Application not found")
+def get_application(application_id: int, user: CurrentUser, db: Session = Depends(get_db)):
+    application = get_owned(db, models.Application, application_id, user, "Application")
     return _to_out(application, _tailored_count(db, application_id))
 
 
 @router.patch("/{application_id}", response_model=ApplicationOut)
 def update_application(
-    application_id: int, payload: ApplicationUpdate, db: Session = Depends(get_db)
+    application_id: int,
+    payload: ApplicationUpdate,
+    user: CurrentUser,
+    db: Session = Depends(get_db),
 ):
-    application = db.get(models.Application, application_id)
-    if not application:
-        raise HTTPException(404, "Application not found")
+    application = get_owned(db, models.Application, application_id, user, "Application")
     updates = payload.model_dump(exclude_unset=True)
     for field, value in updates.items():
         setattr(application, field, value)
@@ -137,9 +142,7 @@ def update_application(
 
 
 @router.delete("/{application_id}", status_code=204)
-def delete_application(application_id: int, db: Session = Depends(get_db)):
-    application = db.get(models.Application, application_id)
-    if not application:
-        raise HTTPException(404, "Application not found")
+def delete_application(application_id: int, user: CurrentUser, db: Session = Depends(get_db)):
+    application = get_owned(db, models.Application, application_id, user, "Application")
     db.delete(application)
     db.commit()

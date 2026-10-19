@@ -3,7 +3,8 @@
 #
 # Optional secrets are read from the host environment (or a .env file next to
 # this one): GROQ_API_KEY or ANTHROPIC_API_KEY enable tailoring; API_KEY gates
-# the backend and is forwarded by the frontend proxy.
+# the backend and is forwarded by the frontend proxy; SUPABASE_URL and
+# SUPABASE_PUBLISHABLE_KEY are needed to sign in.
 
 services:
   db:
@@ -30,6 +31,7 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       LLM_PROVIDER: ${LLM_PROVIDER:-auto}
       API_KEY: ${API_KEY:-}
+      SUPABASE_URL: ${SUPABASE_URL:-}
     ports:
       - "8000:8080"
     depends_on:
@@ -41,6 +43,8 @@ services:
     environment:
       BACKEND_URL: http://backend:8080
       BACKEND_API_KEY: ${API_KEY:-}
+      NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL:-}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
     ports:
       - "3000:8080"
     depends_on:

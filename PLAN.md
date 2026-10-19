@@ -11,6 +11,16 @@ Changes from the draft, found while building:
   `alembic_version` is stamped as baseline automatically, so the live database
   needs no manual `alembic stamp`. Safe because its schema was compared with
   the baseline first (RESUME_FACTS.md).
+- Item 2: sign-in runs entirely on the server (server actions plus cookies),
+  so there's no Supabase code in the browser. The env vars are
+  `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` with no `NEXT_PUBLIC_`
+  prefix, so the Docker image reads them at runtime instead of at build time.
+- Item 2: per-user buckets replace the forwarded-IP logic, so
+  `TRUST_FORWARDED_FOR` was removed. `idempotency_keys` gets the same per-user
+  policy as the other tables, because the backend now queries it as
+  `authenticated`.
+- Item 2: migration 0002 refuses to run if any table has rows (they'd have
+  no owner). The live database had 0 rows; check again just before merging.
 
 ## What I read
 
