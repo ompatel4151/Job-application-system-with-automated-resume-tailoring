@@ -190,3 +190,23 @@ class ResumePage(Page[ResumeOut]):
 
 class TailoredResumePage(Page[TailoredResumeOut]):
     pass
+
+
+# ---------- ATS check ----------
+
+class AtsCheck(BaseModel):
+    name: str  # stable id: parse, headings, contact, keywords, numbers, length
+    label: str
+    passed: bool
+    points: int
+    max_points: int
+    detail: str
+    # What's absent, for the checks where that's a list (keywords, headings).
+    missing: list[str] = []
+
+
+class AtsReport(BaseModel):
+    """A rule-based readiness check, not a prediction of any real ATS."""
+
+    score: int
+    checks: list[AtsCheck]

@@ -196,6 +196,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tailored/{tailored_id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Pdf */
+        get: operations["download_pdf_api_tailored__tailored_id__pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tailored/{tailored_id}/ats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ats Report
+         * @description Rule-based ATS readiness of this tailored resume, computed on request
+         *     (no LLM call, nothing stored).
+         */
+        get: operations["ats_report_api_tailored__tailored_id__ats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -290,6 +328,36 @@ export interface components {
             job_url?: string | null;
             /** Notes */
             notes?: string | null;
+        };
+        /** AtsCheck */
+        AtsCheck: {
+            /** Name */
+            name: string;
+            /** Label */
+            label: string;
+            /** Passed */
+            passed: boolean;
+            /** Points */
+            points: number;
+            /** Max Points */
+            max_points: number;
+            /** Detail */
+            detail: string;
+            /**
+             * Missing
+             * @default []
+             */
+            missing: string[];
+        };
+        /**
+         * AtsReport
+         * @description A rule-based readiness check, not a prediction of any real ATS.
+         */
+        AtsReport: {
+            /** Score */
+            score: number;
+            /** Checks */
+            checks: components["schemas"]["AtsCheck"][];
         };
         /** Body_parse_resume_file_api_resumes_parse_post */
         Body_parse_resume_file_api_resumes_parse_post: {
@@ -1024,6 +1092,66 @@ export interface operations {
                 };
                 content: {
                     "text/plain": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_pdf_api_tailored__tailored_id__pdf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tailored_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ats_report_api_tailored__tailored_id__ats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tailored_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AtsReport"];
                 };
             };
             /** @description Validation Error */

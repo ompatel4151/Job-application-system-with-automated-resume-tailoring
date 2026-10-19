@@ -23,6 +23,7 @@ export const keys = {
   stats: ["stats"] as const,
   resumes: ["resumes"] as const,
   tailored: (id: number) => ["tailored", id] as const,
+  ats: (tailoredId: number) => ["ats", tailoredId] as const,
 };
 
 // List hooks load pages on demand; `items` is every loaded page as one list.
@@ -123,6 +124,10 @@ export function useCreateResume() {
     }) => api.createResume(body, idempotencyKey),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.resumes }),
   });
+}
+
+export function useAtsCheck(tailoredId: number) {
+  return useQuery({ queryKey: keys.ats(tailoredId), queryFn: () => api.atsCheck(tailoredId) });
 }
 
 export function useParseResume() {

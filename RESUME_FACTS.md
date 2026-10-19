@@ -150,3 +150,16 @@ infra/README.md is an estimate from public price lists, not a bill.
 
 Not yet verified live: a real sign-up, sign-in and use of the app (needs your
 account), and shared rate limits (only if `REDIS_URL` is set on Render).
+
+## PDF export and ATS check
+
+| Fact | Where | How |
+|---|---|---|
+| The generated PDF reads back as text: name, contact, every section heading, every bullet. A short resume is 1 page. | local | `tests/test_pdf.py`, extracting the text with pypdf |
+| The ATS check is deterministic: the same resume and keywords give an identical report. A strong sample scores 100/100, with points summing to 100. | local | `tests/test_ats.py` |
+| Mutation check: comparing without the plain-character swap failed the curly-quote test. Skipping the real PDF and comparing against the source text failed 3 tests. | local | Edited `app/services/ats.py`, ran the tests, restored from a copy |
+| Adding fpdf2 grew the backend image from 462 MB to 537 MB (it brings in Pillow and fonttools). | local, Docker | `docker images` |
+| Tests: backend 187 passed with Postgres and Redis. Frontend: 18 Vitest tests and 7 Playwright tests. | local | `pytest`, `npm test`, `npm run test:e2e` |
+
+Not measured: how any real ATS product scores these PDFs. The check is a
+readiness heuristic, not a prediction.

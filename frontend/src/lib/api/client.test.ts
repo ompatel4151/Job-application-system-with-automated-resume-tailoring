@@ -77,4 +77,11 @@ describe("api client", () => {
     // The browser must set multipart/form-data with its boundary itself.
     expect((init.headers as Record<string, string>)["Content-Type"]).toBeUndefined();
   });
+
+  it("asks the backend for a tailored resume's ATS check", async () => {
+    const spy = mockFetch(200, { score: 80, checks: [] });
+
+    await expect(api.atsCheck(7)).resolves.toEqual({ score: 80, checks: [] });
+    expect(spy).toHaveBeenCalledWith("/api/tailored/7/ats", expect.any(Object));
+  });
 });

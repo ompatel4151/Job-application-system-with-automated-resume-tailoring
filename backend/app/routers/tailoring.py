@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
 from sqlalchemy.orm import Session
 
 from app import idempotency, models, observability
@@ -8,8 +8,15 @@ from app.config import settings
 from app.database import get_db, get_owned
 from app.idempotency import IdempotencyKeyHeader
 from app.pagination import DEFAULT_LIMIT, Cursor, Limit, paginate
-from app.schemas import TailoredResumeOut, TailoredResumePage, TailorRequest
-from app.services import tailoring
+from app.schemas import (
+    AtsReport,
+    MatchAnalysis,
+    ResumeContent,
+    TailoredResumeOut,
+    TailoredResumePage,
+    TailorRequest,
+)
+from app.services import ats, pdf, tailoring
 
 router = APIRouter(prefix="/api", tags=["tailoring"])
 
@@ -119,4 +126,26 @@ def download_markdown(tailored_id: int, user: CurrentUser, db: Session = Depends
         headers={
             "Content-Disposition": f"attachment; filename=resume-{tailored_id}.md"
         },
+    )
+
+
+@router.get("/tailored/{tailored_id}/pdf", response_class=Response)
+def download_pdf(tailored_id: int, user: CurrentUser, db: Session = Depends(get_db)):
+    tailored = get_owned(db, models.TailoredResume, tailored_id, user, "Tailored resume")
+    return Response(
+        pdf.render_pdf(ResumeContent.model_validate(tailored.content)),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=resume-{tailored_id}.pdf"},
+    )
+
+
+@router.get("/tailored/{tailored_id}/ats", response_model=AtsReport)
+def ats_report(tailored_id: int, user: CurrentUser, db: Session = Depends(get_db)):
+    """Rule-based ATS readiness of this tailored resume, computed on request
+    (no LLM call, nothing stored)."""
+    tailored = get_owned(db, models.TailoredResume, tailored_id, user, "Tailored resume")
+    analysis = MatchAnalysis.model_validate(tailored.match_analysis)
+    return ats.ats_check(
+        ResumeContent.model_validate(tailored.content),
+        analysis.matched_keywords + analysis.missing_keywords,
     )

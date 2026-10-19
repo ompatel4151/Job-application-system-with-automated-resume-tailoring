@@ -170,12 +170,14 @@ export default function ApplicationDetailPage() {
                   </span>
                   /100 · {formatDate(t.created_at)}
                 </span>
-                <a
-                  href={`/api/tailored/${t.id}/markdown`}
-                  className="text-primary underline"
-                >
-                  Download
-                </a>
+                <span className="flex gap-3">
+                  <a href={`/api/tailored/${t.id}/pdf`} className="text-primary underline">
+                    PDF
+                  </a>
+                  <a href={`/api/tailored/${t.id}/markdown`} className="text-primary underline">
+                    .md
+                  </a>
+                </span>
               </li>
             ))}
           </ul>

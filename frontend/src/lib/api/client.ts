@@ -10,6 +10,7 @@ import type {
   ApplicationPage,
   ApplicationStatus,
   ApplicationUpdate,
+  AtsReport,
   PipelineStats,
   ResumeCreate,
   ResumeOut,
@@ -115,6 +116,8 @@ export const api = {
       headers: idempotencyHeader(idempotencyKey),
       body: JSON.stringify({ resume_id: resumeId ?? null }),
     }),
+  // Rule-based ATS readiness of a tailored resume (no LLM call).
+  atsCheck: (tailoredId: number) => http<AtsReport>(`/tailored/${tailoredId}/ats`),
   listTailored: (applicationId: number, cursor?: string) =>
     http<TailoredResumePage>(
       listPath(`/applications/${applicationId}/tailored`, { cursor }),

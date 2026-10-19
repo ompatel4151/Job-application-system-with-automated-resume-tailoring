@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import {
   useApplication,
+  useAtsCheck,
   useResumes,
   useTailor,
   useUpdateApplication,
@@ -133,18 +134,22 @@ function TailorResult({ result }: { result: TailoredResumeOut }) {
           <span className="text-lg text-muted-foreground">/100</span>
         </div>
         <div className="text-sm text-muted-foreground">
-          Fit score for this job. Higher means the base resume already lines up
-          with what the posting asks for.
+          AI match score: how well your experience fits this job, as judged by
+          the model.
         </div>
-        <a
-          href={`/api/tailored/${result.id}/markdown`}
-          className="ml-auto shrink-0"
-        >
-          <Button variant="outline" size="sm">
-            Download .md
-          </Button>
-        </a>
+        <div className="ml-auto flex shrink-0 gap-2">
+          <a href={`/api/tailored/${result.id}/pdf`}>
+            <Button size="sm">Download PDF</Button>
+          </a>
+          <a href={`/api/tailored/${result.id}/markdown`}>
+            <Button variant="outline" size="sm">
+              .md
+            </Button>
+          </a>
+        </div>
       </div>
+
+      <AtsPanel tailoredId={result.id} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <KeywordList
@@ -219,6 +224,62 @@ function KeywordList({
       ) : (
         <p className="text-sm text-muted-foreground">{empty}</p>
       )}
+    </div>
+  );
+}
+
+// The rule-based ATS check, computed by the backend from the PDF it would
+// download. Kept visibly separate from the AI match score above.
+function AtsPanel({ tailoredId }: { tailoredId: number }) {
+  const { data: report, isLoading, isError, error } = useAtsCheck(tailoredId);
+
+  if (isLoading) return <Skeleton className="h-40 w-full" />;
+  if (isError || !report) {
+    return (
+      <p role="alert" className="text-sm text-destructive">
+        Could not run the ATS check: {(error as Error)?.message}
+      </p>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border p-4">
+      <div className="flex items-baseline gap-3">
+        <h3 className="font-medium">ATS check</h3>
+        <span className={cn("text-2xl font-bold tabular-nums", scoreTone(report.score))}>
+          {report.score}
+          <span className="text-sm text-muted-foreground">/100</span>
+        </span>
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Rule-based checks on the PDF above: the same answer every time, no AI.
+        Real ATS software doesn&apos;t publish a score, so this checks what
+        commonly trips it up rather than predicting a result.
+      </p>
+      <ul className="mt-3 space-y-2 text-sm">
+        {report.checks.map((c) => (
+          <li key={c.name} className="flex gap-2">
+            <span
+              aria-label={c.passed ? "passed" : "needs work"}
+              className={c.passed ? "text-emerald-600" : "text-amber-600"}
+            >
+              {c.passed ? "✓" : "!"}
+            </span>
+            <span className="flex-1">
+              <span className="font-medium">{c.label}</span>{" "}
+              <span className="text-muted-foreground">{c.detail}</span>
+              {!c.passed && c.missing && c.missing.length > 0 ? (
+                <span className="block text-xs text-muted-foreground">
+                  Missing: {c.missing.join(", ")}
+                </span>
+              ) : null}
+            </span>
+            <span className="tabular-nums text-muted-foreground">
+              {c.points}/{c.max_points}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

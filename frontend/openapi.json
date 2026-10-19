@@ -802,6 +802,84 @@
         }
       }
     },
+    "/api/tailored/{tailored_id}/pdf": {
+      "get": {
+        "tags": [
+          "tailoring"
+        ],
+        "summary": "Download Pdf",
+        "operationId": "download_pdf_api_tailored__tailored_id__pdf_get",
+        "parameters": [
+          {
+            "name": "tailored_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tailored Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tailored/{tailored_id}/ats": {
+      "get": {
+        "tags": [
+          "tailoring"
+        ],
+        "summary": "Ats Report",
+        "description": "Rule-based ATS readiness of this tailored resume, computed on request\n(no LLM call, nothing stored).",
+        "operationId": "ats_report_api_tailored__tailored_id__ats_get",
+        "parameters": [
+          {
+            "name": "tailored_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tailored Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AtsReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -1096,6 +1174,74 @@
         },
         "type": "object",
         "title": "ApplicationUpdate"
+      },
+      "AtsCheck": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          },
+          "max_points": {
+            "type": "integer",
+            "title": "Max Points"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "passed",
+          "points",
+          "max_points",
+          "detail"
+        ],
+        "title": "AtsCheck"
+      },
+      "AtsReport": {
+        "properties": {
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/AtsCheck"
+            },
+            "type": "array",
+            "title": "Checks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score",
+          "checks"
+        ],
+        "title": "AtsReport",
+        "description": "A rule-based readiness check, not a prediction of any real ATS."
       },
       "Body_parse_resume_file_api_resumes_parse_post": {
         "properties": {

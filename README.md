@@ -33,8 +33,22 @@ recommendations.
 - **Match analysis.** Every tailored resume comes with a 0 to 100 fit score,
   the keywords you match, the requirements you're missing, and specific
   recommendations (what to learn, what to address in a cover letter).
-- **Markdown export.** Download any tailored resume as a Markdown document,
-  ready to convert to PDF.
+- **PDF export.** Download any tailored resume as a one-column PDF with real,
+  selectable text and standard section headings, the layout ATS software reads
+  most reliably. Markdown export is still there.
+- **ATS check.** A rule-based score out of 100 for each tailored resume,
+  computed in code, with no AI, so the same resume always gets the same
+  answer. It checks:
+  - that the PDF's text reads back intact (it renders the real PDF and
+    extracts it)
+  - standard sections, email and phone
+  - the job's keywords, matched as whole words
+  - bullets that state a number
+  - length
+
+  Every point lost comes with the reason. Real ATS products don't publish a
+  score, so this checks what commonly trips them up rather than predicting a
+  result. It's shown separately from the AI match score.
 - **Accounts.** Sign in with email and password (Supabase Auth). Each user only
   ever sees their own applications and resumes.
 - **API docs.** Interactive OpenAPI docs at `/docs` on the backend.
@@ -217,6 +231,8 @@ every pull request.
 | `POST` | `/api/applications/{id}/tailor` | Generate a tailored resume |
 | `GET` | `/api/applications/{id}/tailored` | List tailored versions (paginated) |
 | `GET` | `/api/tailored/{id}/markdown` | Download as Markdown |
+| `GET` | `/api/tailored/{id}/pdf` | Download as PDF |
+| `GET` | `/api/tailored/{id}/ats` | Rule-based ATS check (score, and the reason for every point lost) |
 
 ## Reliability and safety
 
