@@ -163,3 +163,12 @@ account), and shared rate limits (only if `REDIS_URL` is set on Render).
 
 Not measured: how any real ATS product scores these PDFs. The check is a
 readiness heuristic, not a prediction.
+
+## Current totals (2026-10-19, main at `ef2d8cc`)
+
+| Fact | Where | How |
+|---|---|---|
+| 218 automated tests: 193 backend (pytest; 1 SQLite-only test skipped), 18 frontend unit (Vitest), 7 end-to-end (Playwright). | local, with Postgres 16 and Redis 7 in Docker | `TEST_POSTGRES_URL=... TEST_REDIS_URL=... pytest`, `npm test`, `npm run test:e2e` |
+| 92% backend line coverage (1,193 statements, 94 missed). | local, same run | `pytest --cov=app` |
+| 18 API endpoints under `/api` (plus `/health` and `/metrics`). | local | Counted from the OpenAPI schema |
+| Live bugs found and fixed after deploy: sign-in buttons that never submitted (Base UI defaults to `type="button"`); PDF titles running into the dates; 43 non-breaking hyphens and 19 narrow spaces printing as "?"; an ATS keyword count (5 of 19) that contradicted the AI's lists. Each fix shipped with a regression test. | live, then local tests | Reproduced from the live PDF and the Render request logs |
