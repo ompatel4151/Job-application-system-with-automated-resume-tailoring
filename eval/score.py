@@ -55,6 +55,8 @@ def score_run(rows, jds, checker, judge, keywords, ids):
             false_positives += 1
     return {
         "jds_scored": len(ok), "jds_failed": len([i for i in ids if i in latest and not latest[i]["ok"]]),
+        # Failures that a later re-run of the harness retried successfully.
+        "first_attempt_failures": len({r["jd_id"] for r in rows if not r["ok"] and r["jd_id"] in ids}),
         "bullets": units,
         "invented_rate": invented / units if units else None,
         "checker_flag_rate": check_flags / units if units else None,

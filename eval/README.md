@@ -42,4 +42,6 @@ All commands run from `eval/` with `../.venv/bin/python`, and need
    `label_sheet.py agree ...`.
 
 Failed tailorings are kept in the run files and counted in the results.
-They're never silently dropped.
+They're never silently dropped. Re-running a run's command retries the JDs
+that failed, the same way a user would press Tailor again; the scorer reports
+both the final failures and the first-attempt failures.
