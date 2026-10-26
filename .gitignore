@@ -15,3 +15,6 @@ infra/.terraform/
 infra/*.tfstate
 infra/*.tfstate.*
 infra/*.tfvars
+
+# Eval data: personal fact sheet, third-party job postings, raw model outputs.
+eval/private/

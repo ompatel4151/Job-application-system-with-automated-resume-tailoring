@@ -39,6 +39,8 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r requirements.txt
       - run: pytest
+      # The eval's deterministic checker (AGENT_EXPERIMENT.md); no API calls.
+      - run: pip install pyyaml && python -m pytest ../eval/tests -q
 
   frontend:
     name: Frontend (lint, test, build)

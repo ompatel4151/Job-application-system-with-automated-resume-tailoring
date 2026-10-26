@@ -1,9 +1,12 @@
 # Grounded tailoring agent: pre-registered experiment
 
-**Status: Step 0, the plan. Nothing has been built or measured.** This file is
-committed before any agent code exists or any measurement runs, so the metrics
-and decision rules below can't be fitted to the results. Waiting for approval
-of the decisions in section 9.
+**Status: plan approved 2026-10-25 with every recommendation in section 9
+(D1 Pinecone, D2 private data gitignored, D3 you supply the JDs, D4 free tier
+over several days, D5 I draft the fact sheet and you verify it, D6 hand
+labels, D7 a held-out set of 10, D8 you create the Pinecone account). Nothing
+has been measured yet.** This file was committed (`e2447d4`) before any agent
+code existed or any measurement ran, so the metrics and decision rules below
+can't be fitted to the results.
 
 Written 2026-10-25, on `main` at `a1c7706`.
 
@@ -354,6 +357,15 @@ later.
 | D6 | Hand-label workload | 20% of run 1's bullets for each mode: roughly 60 to 70 bullets per mode, about 120 to 140 in total. About an hour of your time. |
 | D7 | A held-out set (optional) | Keep 10 of the 30 JDs hidden while iterating on the agent, and report the final decision on all 30 **and** on the held-out 10. Recommended, because it guards against overfitting. Your rules don't require it, so it's your call. |
 | D8 | Your Pinecone account | You create a free Starter account and set `PINECONE_API_KEY` (locally, and on Render only if it ships). I can't create accounts. |
+
+### Approved additions (D7), fixed before any JD is seen
+
+- **Held-out set:** once the 30 JD ids exist, 10 are drawn with
+  `random.Random(20261025).sample(sorted(ids), 10)` and recorded here. I don't
+  open them, or look at any per-JD output for them, while iterating on the
+  agent. They're scored only in the final 3 runs of each mode.
+- The decision rules are applied to all 30 JDs. The held-out 10 are reported
+  alongside as a check for overfitting.
 
 ## 10. Results
 
