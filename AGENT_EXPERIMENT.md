@@ -369,6 +369,17 @@ later.
 
 ## 10. Results
 
-Empty until Step 1. Every run gets appended here with the date, commit,
+### Calibration (before Step 1), 2026-10-25
+
+- **Fact sheet:** 27 facts, all marked verified by the user.
+- **Base resume** (the cleaned copy that plain mode tailors from): 13
+  units (bullets and summary sentences). **0 flagged by the checker and 0 by
+  the judge.** The calibration requirement in section 7 is met.
+- **Judge cost,** measured: 13 calls, 27,720 tokens, so about 2,130 tokens
+  per one-bullet call (the whole fact sheet is sent each time).
+- **Environment:** my Mac, Groq API, `qwen/qwen3.8-27b`, `reasoning_effort=none`,
+  temperature 0.
+
+Step 1 hasn't started. It needs the 30 JDs. Every run gets appended here with the date, commit,
 command, environment, eval-set size and run number, and mirrored in
 RESUME_FACTS.md.

@@ -14,6 +14,11 @@ EVAL = Path(__file__).resolve().parent
 PRIVATE = EVAL / "private"
 sys.path.insert(0, str(EVAL.parent / "backend"))
 
+from dotenv import load_dotenv  # noqa: E402
+
+# The app reads .env from the working directory; the eval runs from eval/.
+load_dotenv(EVAL.parent / "backend" / ".env")
+
 from checker import Fact  # noqa: E402
 
 HOLDOUT_SEED = 20261025  # AGENT_EXPERIMENT.md, "Approved additions (D7)"
