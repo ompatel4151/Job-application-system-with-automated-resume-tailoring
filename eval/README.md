@@ -9,7 +9,8 @@ Everything in this folder was committed before any measurement ran.
   runs.
 - `base_resume.json`: what plain mode tailors from. It must score 0
   unsupported bullets against the facts (the calibration step).
-- `jds.yaml`: the 30 job descriptions, in this format:
+The 30 job descriptions are **synthetic** and public: `eval/jds.yaml`
+(amendment A2). They use this format:
 
 ```yaml
 - id: swe-01            # unique; prefix swe-, aiml- or data-

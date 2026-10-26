@@ -368,6 +368,10 @@ later.
   agent. They're scored only in the final 3 runs of each mode.
 - The decision rules are applied to all 30 JDs. The held-out 10 are reported
   alongside as a check for overfitting.
+- **Drawn 2026-10-25** from the synthetic set (A2): `aiml-03, aiml-07,
+  aiml-08, data-04, data-05, data-06, swe-01, swe-04, swe-06, swe-07`. This
+  includes 2 of the 5 blocker JDs (`swe-04` sponsorship, `data-04` SAS), so
+  agent iteration runs see only 3 blocker JDs.
 
 ## Amendments (each made before any Step 1 data existed)
 
@@ -385,6 +389,24 @@ later.
     3,019 tokens instead of 13 calls and 27,720 tokens.
   - Cache keys include the method, so per-bullet verdicts are never reused
     under A1.
+
+- **A2, 2026-10-25: the 30 job descriptions are synthetic, written for this
+  eval.** This replaces D3 (the user pasting real postings), at the user's
+  request ("can't you add job description on your own").
+  - Real postings weren't copied, because they're third-party copyrighted
+    text.
+  - They're written by the AI assistant that will also build the agent.
+    That's a bias risk: the author knows the design. It's mitigated by
+    committing them publicly before any agent code exists and before any
+    run.
+  - The mix is 12 SWE, 9 AI/ML and 9 data analyst, with fictional companies.
+  - The 5 blockers: `sponsorship` (swe-04, aiml-05), `clearance` (swe-08),
+    `C#` (swe-10), `SAS` (data-04). A script confirmed each phrase is in its
+    posting, and that none of the other 25 mention sponsorship, citizenship,
+    clearance, C# or SAS.
+  - **Limitation:** 65 to 130 words each (86 on average), shorter than
+    typical real postings, so they carry fewer keywords. Results must be
+    described as "on 30 synthetic job descriptions".
 
 ## 10. Results
 

@@ -1,0 +1,637 @@
+# 30 SYNTHETIC job descriptions for the agent experiment (amendment A2).
+#
+# Written on 2026-10-25 for this eval, before any Step 1 run. Fictional
+# companies; any resemblance to real postings is generic. Not copied from any
+# job board. Committed publicly so the eval set can be checked.
+#
+# Mix: 12 SWE, 9 AI/ML, 9 data analyst. 5 have a blocker; its key phrase is in
+# "blocker" and counts as caught if a mode's blockers output contains it
+# (any case). The other 25 deliberately mention no sponsorship, citizenship or
+# clearance terms at all.
+
+- id: swe-01
+  category: swe
+  company: Brightlane Logistics
+  role: Backend Software Engineer
+  blocker: null
+  text: |
+    Brightlane builds routing software for regional delivery fleets. We're hiring a Backend Software Engineer to work on the APIs that dispatchers and drivers use every day.
+
+    What you'll do:
+    - Design and build REST APIs in Python (FastAPI) backed by PostgreSQL.
+    - Write tests with pytest and keep our CI pipeline in GitHub Actions green.
+    - Improve slow queries and add indexes where the data shows they're needed.
+    - Take part in code review and on-call for the services you own.
+
+    What we're looking for:
+    - Experience building web services in Python.
+    - Solid SQL and an understanding of relational data modeling.
+    - Familiarity with Docker and deploying to a cloud platform.
+    - Clear written communication.
+
+    Nice to have: Redis, background job queues, experience with rate limiting or idempotent APIs.
+
+- id: swe-02
+  category: swe
+  company: Fernwood Health Systems
+  role: Full-Stack Engineer
+  blocker: null
+  text: |
+    Fernwood makes scheduling software for outpatient clinics. Our Full-Stack Engineers own features from the database to the browser.
+
+    Responsibilities:
+    - Build user-facing features in React and TypeScript, using Next.js.
+    - Build and maintain backend endpoints and database schema changes.
+    - Write unit and end-to-end tests (Vitest, Playwright).
+    - Work with designers and clinicians to ship small, safe increments.
+
+    Requirements:
+    - Professional or substantial project experience with TypeScript and React.
+    - Experience with a backend language such as Python or Node.js.
+    - Understanding of authentication and protecting user data.
+    - Comfort with Git-based workflows and code review.
+
+    Bonus: Tailwind CSS, PostgreSQL, row-level security, accessibility experience.
+
+- id: swe-03
+  category: swe
+  company: Quarry Robotics
+  role: Software Engineer, Platform
+  blocker: null
+  text: |
+    Quarry Robotics runs a fleet of warehouse robots. The Platform team builds the services that coordinate them.
+
+    You will:
+    - Build distributed services in Go and Python that handle thousands of robot events per second.
+    - Run services on Kubernetes and define infrastructure with Terraform.
+    - Instrument services with Prometheus and Grafana and respond to alerts.
+    - Use Kafka for event streaming between services.
+
+    You have:
+    - Strong programming skills in Go, Python, or a similar language.
+    - Experience with Kubernetes in a production environment.
+    - An understanding of concurrency and failure handling in distributed systems.
+
+    Nice to have: gRPC, experience with event-driven architectures.
+
+- id: swe-04
+  category: swe
+  company: Lumen Ledger
+  role: Software Engineer, Payments API
+  blocker: sponsorship
+  text: |
+    Lumen Ledger provides payment APIs for small online businesses. Join the Payments API team.
+
+    What you'll work on:
+    - Build and maintain Java services (Spring Boot) that process card payments.
+    - Design idempotent APIs so retried requests never charge a customer twice.
+    - Work with PostgreSQL and Redis; tune queries under load.
+    - Write automated tests and contribute to our CI/CD pipeline.
+
+    Qualifications:
+    - Experience with Java or another JVM language.
+    - Understanding of transactions, concurrency and data consistency.
+    - Experience with relational databases.
+
+    Please note: we are unable to provide visa sponsorship for this position, now or in the future. Applicants must be authorized to work in the United States without sponsorship.
+
+- id: swe-05
+  category: swe
+  company: Pinegate Software
+  role: Junior Software Engineer
+  blocker: null
+  text: |
+    Pinegate builds internal tools for property management companies. We're hiring a Junior Software Engineer who likes learning quickly.
+
+    In this role you will:
+    - Fix bugs and build small features across our Python and JavaScript codebase.
+    - Write tests for the code you change.
+    - Learn our deployment process with Docker and GitHub Actions.
+    - Pair with senior engineers and grow through code review.
+
+    You should have:
+    - A degree in progress or completed in Computer Science or a related field, or equivalent experience.
+    - Projects that show you can build and ship software end to end.
+    - Familiarity with SQL and Git.
+
+    We value curiosity, clear questions and careful work over years of experience.
+
+- id: swe-06
+  category: swe
+  company: Harborline Media
+  role: Backend Engineer, Content Platform
+  blocker: null
+  text: |
+    Harborline publishes local news across 40 cities. The Content Platform team runs the systems behind every article.
+
+    Responsibilities:
+    - Build APIs in Python (Django or FastAPI) for editors and our apps.
+    - Own caching strategy with Redis and a CDN to keep pages fast.
+    - Improve observability with structured logging and metrics.
+    - Plan and run database migrations safely on a live system.
+
+    Requirements:
+    - Experience with Python web frameworks.
+    - Experience with PostgreSQL and schema migrations.
+    - Understanding of HTTP caching and performance.
+
+    Nice to have: Elasticsearch, experience with high-traffic sites, Alembic.
+
+- id: swe-07
+  category: swe
+  company: Arcadia Learning
+  role: Full-Stack Developer (EdTech)
+  blocker: null
+  text: |
+    Arcadia Learning builds homework and tutoring tools for high school students.
+
+    You'll:
+    - Build features with Next.js, React and TypeScript on the front end.
+    - Build backend services in Python and maintain our PostgreSQL database.
+    - Integrate large language models into tutoring features, with guardrails.
+    - Measure feature quality with experiments and user feedback.
+
+    You bring:
+    - Experience with React and a backend language.
+    - Interest in education and in using AI responsibly.
+    - Experience writing tests and reviewing code.
+
+    Nice to have: retrieval-augmented generation (RAG), prompt evaluation, Supabase.
+
+- id: swe-08
+  category: swe
+  company: Cobalt Defense Systems
+  role: Software Engineer II
+  blocker: clearance
+  text: |
+    Cobalt Defense Systems builds mission planning software for government customers.
+
+    Duties:
+    - Develop backend services in Java and Python.
+    - Build data pipelines that process sensor data.
+    - Write unit and integration tests; participate in code reviews.
+    - Deploy to on-premises Linux environments.
+
+    Required qualifications:
+    - Bachelor's degree in Computer Science or related field.
+    - Experience with Java or Python.
+    - U.S. citizenship and an active Secret security clearance are required for this role.
+
+    Preferred: experience with Docker, Linux administration, and message queues.
+
+- id: swe-09
+  category: swe
+  company: Maple & Main Retail
+  role: Software Engineer, Integrations
+  blocker: null
+  text: |
+    Maple & Main operates 300 retail stores. The Integrations team connects our point-of-sale systems with suppliers and analytics tools.
+
+    What you'll do:
+    - Build services that sync sales and inventory data between systems in near real time.
+    - Debug data sync failures across networks, firewalls and third-party APIs.
+    - Write Python services and SQL queries; automate checks and alerts.
+    - Document integrations so other teams can rely on them.
+
+    What we need:
+    - Experience building or maintaining data integrations or proxies.
+    - Python and SQL skills.
+    - Patience for debugging across systems you don't fully control.
+
+    Nice to have: Windows Server, BI dashboards, experience with retail data.
+
+- id: swe-10
+  category: swe
+  company: Tidewater Software
+  role: Software Engineer (C#/.NET)
+  blocker: C#
+  text: |
+    Tidewater builds accounting software for construction firms.
+
+    Responsibilities:
+    - Develop and maintain features in our C# and .NET codebase.
+    - Build REST APIs with ASP.NET and work with SQL Server.
+    - Write unit tests and take part in code reviews.
+
+    Required:
+    - Professional experience developing applications in C# and .NET is required for this role.
+    - Experience with SQL Server or another relational database.
+    - Understanding of object-oriented design.
+
+    Nice to have: Azure, Blazor, experience with financial software.
+
+- id: swe-11
+  category: swe
+  company: Kestrel Mobility
+  role: Software Engineer, Reliability
+  blocker: null
+  text: |
+    Kestrel runs a bike and scooter sharing network in 12 cities. Our Reliability team keeps the platform healthy.
+
+    You'll:
+    - Build tooling for load testing and capacity planning.
+    - Add rate limiting and backpressure to protect shared services.
+    - Improve monitoring with Prometheus and write runbooks for incidents.
+    - Investigate production incidents and fix root causes.
+
+    You have:
+    - Experience with a backend language (Python, Go or Java).
+    - An understanding of databases, caching and how systems fail under load.
+    - Experience with Linux and containers.
+
+    Nice to have: Redis, PostgreSQL performance tuning, Terraform.
+
+- id: swe-12
+  category: swe
+  company: Juniper Analytics
+  role: Software Engineer, Concurrency and Performance
+  blocker: null
+  text: |
+    Juniper builds a high-throughput event processing engine used by analytics teams.
+
+    Responsibilities:
+    - Write multithreaded code in Java that processes millions of events per minute.
+    - Find and fix race conditions, deadlocks and contention.
+    - Build stress tests and benchmarks; measure before and after every change.
+    - Review designs for thread safety.
+
+    Requirements:
+    - Strong Java skills, including the concurrency utilities.
+    - Understanding of locks, condition variables and memory visibility.
+    - Experience with JUnit and build tools such as Maven or Gradle.
+
+    Nice to have: experience profiling JVM applications.
+
+- id: aiml-01
+  category: ai_ml
+  company: Verity AI
+  role: Machine Learning Engineer, LLM Applications
+  blocker: null
+  text: |
+    Verity AI builds assistants that answer questions from a company's own documents.
+
+    What you'll do:
+    - Build retrieval-augmented generation (RAG) pipelines: chunking, embeddings, vector search and reranking.
+    - Evaluate answer quality with automated evals and LLM-as-judge setups.
+    - Reduce hallucinations and make answers cite their sources.
+    - Ship models behind APIs in Python.
+
+    Requirements:
+    - Experience building applications on top of LLMs.
+    - Python and experience with at least one vector store (FAISS, Pinecone or pgvector).
+    - A habit of measuring quality instead of guessing.
+
+    Nice to have: PyTorch, ONNX, model serving under tight memory limits.
+
+- id: aiml-02
+  category: ai_ml
+  company: Northwind Research Labs
+  role: AI Engineer
+  blocker: null
+  text: |
+    Northwind Research Labs helps universities run research assistants on their own course material.
+
+    Responsibilities:
+    - Build and deploy chatbots that answer only from approved sources.
+    - Add speech input using models such as Whisper.
+    - Build dashboards that show instructors what students ask about.
+    - Run evaluations and track refusal and citation accuracy.
+
+    Requirements:
+    - Python web development experience (Flask or FastAPI).
+    - Experience deploying an application to a cloud platform.
+    - Experience with PostgreSQL.
+
+    Nice to have: experience moving between LLM providers, cost and latency tuning.
+
+- id: aiml-03
+  category: ai_ml
+  company: Sablewood Insurance
+  role: Machine Learning Engineer
+  blocker: null
+  text: |
+    Sablewood uses machine learning to price policies and detect fraudulent claims.
+
+    You will:
+    - Train and tune models with scikit-learn, XGBoost and PyTorch.
+    - Build feature pipelines on Spark and Databricks.
+    - Deploy models with MLflow and monitor them for drift.
+    - Work with actuaries to explain model behavior.
+
+    You have:
+    - Experience training and evaluating supervised models on tabular data.
+    - Python and SQL skills.
+    - Experience with Spark or another distributed data tool.
+
+    Nice to have: AWS SageMaker, experience in insurance or finance.
+
+- id: aiml-04
+  category: ai_ml
+  company: Orchard Vision
+  role: Computer Vision Engineer
+  blocker: null
+  text: |
+    Orchard Vision builds cameras that grade fruit quality on packing lines.
+
+    Responsibilities:
+    - Train image classification and detection models with PyTorch.
+    - Optimize models for edge devices with ONNX and TensorRT.
+    - Build data labeling and evaluation pipelines.
+    - Measure accuracy and latency on real hardware.
+
+    Requirements:
+    - Experience training deep learning models for computer vision.
+    - Python, NumPy and PyTorch.
+    - Experience making models fit memory and latency budgets.
+
+    Nice to have: C++, CUDA, experience with embedded Linux.
+
+- id: aiml-05
+  category: ai_ml
+  company: Clearpath Legal
+  role: Applied AI Engineer
+  blocker: sponsorship
+  text: |
+    Clearpath Legal builds tools that help lawyers review contracts faster.
+
+    What you'll do:
+    - Build LLM-powered features that extract clauses and flag risks.
+    - Design evaluation sets and measure precision and recall of extractions.
+    - Build structured outputs with JSON schema validation.
+    - Work in Python and TypeScript.
+
+    Requirements:
+    - Experience building with LLM APIs and structured outputs.
+    - Python and experience writing evaluations.
+
+    Candidates must be authorized to work in the United States without current or future visa sponsorship. We do not sponsor work visas for this role.
+
+- id: aiml-06
+  category: ai_ml
+  company: Ridgeline Energy
+  role: Data Scientist, Forecasting
+  blocker: null
+  text: |
+    Ridgeline Energy forecasts electricity demand for utilities.
+
+    Responsibilities:
+    - Build time-series forecasting models (gradient boosting, deep learning).
+    - Analyze model errors and communicate uncertainty to operators.
+    - Build reproducible data pipelines in Python and SQL.
+    - Validate results against source data and catch data quality problems.
+
+    Requirements:
+    - Experience with Python, pandas and statistical modeling.
+    - Experience with SQL and messy real-world data.
+    - Ability to explain results to non-technical audiences.
+
+    Nice to have: Airflow, experience in energy or weather data.
+
+- id: aiml-07
+  category: ai_ml
+  company: Lighthouse Search
+  role: ML Engineer, Search Relevance
+  blocker: null
+  text: |
+    Lighthouse builds site search for online stores.
+
+    You will:
+    - Improve ranking with learning-to-rank models and embeddings.
+    - Run A/B tests and offline relevance evaluations.
+    - Work on Elasticsearch and vector search infrastructure.
+    - Write production Python services.
+
+    You have:
+    - Experience with information retrieval or recommender systems.
+    - Python and experience with Elasticsearch or a vector database.
+    - Comfort with experiment design and statistics.
+
+    Nice to have: Kafka, Kubernetes, experience with large catalogs.
+
+- id: aiml-08
+  category: ai_ml
+  company: Mosaic Health AI
+  role: AI Platform Engineer
+  blocker: null
+  text: |
+    Mosaic Health AI runs LLM features for hospital documentation.
+
+    Responsibilities:
+    - Build the platform that routes requests to multiple LLM providers with fallbacks.
+    - Add rate limiting, retries and idempotency so requests are safe to retry.
+    - Track latency, cost and errors with metrics and dashboards.
+    - Protect patient data with strict access controls.
+
+    Requirements:
+    - Backend engineering experience in Python.
+    - Experience operating APIs with monitoring and alerting.
+    - Understanding of authentication and authorization.
+
+    Nice to have: Redis, Prometheus, PostgreSQL row-level security.
+
+- id: aiml-09
+  category: ai_ml
+  company: Stellar Robotics
+  role: Machine Learning Research Engineer
+  blocker: null
+  text: |
+    Stellar Robotics trains control policies for robot arms.
+
+    What you'll do:
+    - Implement and run reinforcement learning experiments in PyTorch and JAX.
+    - Build simulation environments and data collection tools.
+    - Scale training across GPU clusters.
+    - Write up results and reproduce papers.
+
+    Requirements:
+    - Strong Python and deep learning experience.
+    - Experience with reinforcement learning or robotics.
+    - Experience running experiments on GPUs.
+
+    Nice to have: published research, C++, ROS.
+
+- id: data-01
+  category: data
+  company: Crestview Bank
+  role: Data Analyst
+  blocker: null
+  text: |
+    Crestview Bank is hiring a Data Analyst to support our lending team.
+
+    Responsibilities:
+    - Write SQL queries to answer questions about loan performance.
+    - Build dashboards in Tableau or Power BI.
+    - Find and fix data quality issues, such as bad joins and duplicate records.
+    - Present findings to managers.
+
+    Requirements:
+    - Strong SQL.
+    - Experience with Excel and a BI tool.
+    - Attention to detail and the habit of checking results against source data.
+
+    Nice to have: Python, pandas, banking experience.
+
+- id: data-02
+  category: data
+  company: Bluebird Retail Group
+  role: Retail Data Analyst
+  blocker: null
+  text: |
+    Bluebird runs 80 grocery stores and needs better sales data.
+
+    You'll:
+    - Keep live sales dashboards accurate and up to date.
+    - Investigate why data feeds drop or arrive late, and work with IT to fix them.
+    - Analyze promotions and inventory with SQL and Python.
+    - Automate weekly reports.
+
+    You have:
+    - SQL and Excel skills; Python is a plus.
+    - Experience with BI dashboards.
+    - Curiosity about why numbers look wrong.
+
+    Nice to have: experience with retail point-of-sale data or real-time data feeds.
+
+- id: data-03
+  category: data
+  company: Summit Public Health Institute
+  role: Research Data Analyst
+  blocker: null
+  text: |
+    Summit Public Health Institute studies community health programs.
+
+    Responsibilities:
+    - Clean and merge datasets from several sources.
+    - Build reproducible analysis pipelines in Python or R.
+    - Produce figures and tables for reports and papers.
+    - Document data decisions so others can reproduce results.
+
+    Requirements:
+    - Python or R for data analysis.
+    - Experience merging messy datasets and validating the result.
+    - Basic statistics.
+
+    Nice to have: experience in academic research settings.
+
+- id: data-04
+  category: data
+  company: Granite Insurance Partners
+  role: Data Analyst, Claims
+  blocker: SAS
+  text: |
+    Granite Insurance Partners is looking for a Data Analyst to support claims operations.
+
+    Duties:
+    - Build monthly claims reports.
+    - Analyze claim trends and fraud indicators.
+    - Maintain reporting code and documentation.
+
+    Required qualifications:
+    - Our reporting runs entirely in SAS: at least 2 years of hands-on SAS programming experience and a SAS Base Programmer certification are required.
+    - SQL skills.
+
+    Preferred: insurance experience, Excel.
+
+- id: data-05
+  category: data
+  company: Waypoint Travel
+  role: Product Data Analyst
+  blocker: null
+  text: |
+    Waypoint helps travelers plan trips. Our product analysts help teams decide what to build.
+
+    You will:
+    - Define metrics for new features and build dashboards to track them.
+    - Run A/B test analyses and explain results.
+    - Write SQL against our warehouse (BigQuery).
+    - Work closely with engineers and designers.
+
+    You have:
+    - Strong SQL and experience with product analytics.
+    - Experience with experiment analysis.
+    - Clear communication.
+
+    Nice to have: Python, dbt, Looker.
+
+- id: data-06
+  category: data
+  company: Ironbridge Manufacturing
+  role: Operations Data Analyst
+  blocker: null
+  text: |
+    Ironbridge makes industrial pumps. We need an analyst to turn factory data into decisions.
+
+    Responsibilities:
+    - Pull data from production systems with SQL.
+    - Build Power BI dashboards for plant managers.
+    - Analyze downtime and quality problems.
+    - Automate data cleanup with Python scripts.
+
+    Requirements:
+    - SQL and a BI tool.
+    - Some Python or scripting experience.
+    - Comfort working with operations teams.
+
+    Nice to have: experience with manufacturing data.
+
+- id: data-07
+  category: data
+  company: Civic Data Collaborative
+  role: Data Analyst, Public Programs
+  blocker: null
+  text: |
+    Civic Data Collaborative helps city governments measure how well their programs work.
+
+    Responsibilities:
+    - Analyze program data with SQL and Python.
+    - Build dashboards and short briefings for city staff.
+    - Check data quality and document how each number was produced.
+
+    Requirements:
+    - Bachelor's degree, completed or in progress.
+    - SQL and Python experience.
+    - Ability to explain findings to non-technical audiences.
+
+    Preferred: Tableau, experience with public-sector data.
+
+- id: data-08
+  category: data
+  company: Coral Reef Analytics
+  role: Junior Data Analyst
+  blocker: null
+  text: |
+    Coral Reef Analytics is a small consultancy helping nonprofits use their data.
+
+    You'll:
+    - Clean and analyze data in Python and SQL.
+    - Build simple dashboards and reports.
+    - Explain results to clients in plain language.
+    - Learn from senior analysts on real projects.
+
+    You have:
+    - Coursework or projects in data analysis.
+    - Python or SQL basics.
+    - Interest in nonprofit work.
+
+    Nice to have: Excel, statistics coursework.
+
+- id: data-09
+  category: data
+  company: Pulse Fitness Apps
+  role: Data Analyst, Growth
+  blocker: null
+  text: |
+    Pulse makes fitness apps with 2 million users. Our growth team needs an analyst.
+
+    Responsibilities:
+    - Analyze sign-up and retention funnels.
+    - Build and maintain dashboards in Looker.
+    - Write SQL and Python to answer growth questions.
+    - Help design and evaluate experiments.
+
+    Requirements:
+    - SQL, and Python or R.
+    - Experience with funnel and cohort analysis.
+    - Clear writing.
+
+    Nice to have: dbt, Snowflake, mobile app analytics.
