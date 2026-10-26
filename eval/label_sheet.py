@@ -49,9 +49,11 @@ def main():
     if any(r["label"].strip() not in ("supported", "unsupported") for r in rows):
         raise SystemExit("Every row needs label = supported or unsupported.")
     agree = {"checker": 0, "judge": 0, "union": 0}
-    for r in rows:
+    # Cached from scoring, which judged each resume's bullets together.
+    verdicts = judge.verdicts([r["bullet"] for r in rows])
+    for r, verdict in zip(rows, verdicts):
         human = r["label"].strip() == "unsupported"
-        c, j = not checker.check(r["bullet"]).supported, not judge.verdict(r["bullet"]).supported
+        c, j = not checker.check(r["bullet"]).supported, not verdict.supported
         agree["checker"] += c == human
         agree["judge"] += j == human
         agree["union"] += (c or j) == human

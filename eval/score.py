@@ -40,8 +40,9 @@ def score_run(rows, jds, checker, judge, keywords, ids):
     false_positives = 0
     for r in ok:
         resume, analysis = r["result"]["tailored_resume"], r["result"]["match_analysis"]
-        for bullet in bullets_of(resume):
-            c, j = not checker.check(bullet).supported, not judge.verdict(bullet).supported
+        units_here = bullets_of(resume)
+        for bullet, verdict in zip(units_here, judge.verdicts(units_here)):
+            c, j = not checker.check(bullet).supported, not verdict.supported
             units += 1
             check_flags += c
             judge_flags += j

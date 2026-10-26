@@ -248,7 +248,9 @@ range (min to max)** of each per-run aggregate.
     post-check.
   - Or if it contains a term from `eval/tech_terms.txt` (a fixed list,
     committed before Step 1) that isn't in any fact's `tools` or `text`.
-- **LLM judge** (`eval/judge.py`):
+- **LLM judge** (`eval/judge.py`). *Amended before Step 1 (A1, below):*
+  one judge call covers all the bullets of one tailored resume and returns a
+  verdict for each. The rest of this description is unchanged.
   - Model: `qwen/qwen3.8-27b` (Alibaba family, on Groq). Tailoring uses
     `openai/gpt-oss-120b` (OpenAI family), so they're different families.
   - Temperature 0, strict JSON output.
@@ -367,6 +369,23 @@ later.
 - The decision rules are applied to all 30 JDs. The held-out 10 are reported
   alongside as a check for overfitting.
 
+## Amendments (each made before any Step 1 data existed)
+
+- **A1, 2026-10-25: the judge works per resume, not per bullet.** Approved by
+  the user before any baseline run.
+  - Reason: per-bullet calls measured at about 2,130 tokens each (the fact
+    sheet goes in every call). About 2,500 bullets × 2,130 tokens is about
+    5.4M tokens, against a free-tier cap of about 200K a day, so about 27
+    days.
+  - Per resume: one call per tailored resume, a verdict for each bullet,
+    about 180 calls.
+  - The verdict is still per bullet, so the metric, the headline union and
+    rule 6 are unchanged.
+  - Calibration was re-run under A1: still 0 of 13 flagged, at 1 call and
+    3,019 tokens instead of 13 calls and 27,720 tokens.
+  - Cache keys include the method, so per-bullet verdicts are never reused
+    under A1.
+
 ## 10. Results
 
 ### Calibration (before Step 1), 2026-10-25
@@ -379,6 +398,9 @@ later.
   per one-bullet call (the whole fact sheet is sent each time).
 - **Environment:** my Mac, Groq API, `qwen/qwen3.8-27b`, `reasoning_effort=none`,
   temperature 0.
+
+Re-run under amendment A1 (one call for all 13 units): **0 flagged**, 3,019
+tokens (2,787 in, 232 out), 1.2 s.
 
 Step 1 hasn't started. It needs the 30 JDs. Every run gets appended here with the date, commit,
 command, environment, eval-set size and run number, and mirrored in
