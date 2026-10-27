@@ -408,6 +408,28 @@ later.
     typical real postings, so they carry fewer keywords. Results must be
     described as "on 30 synthetic job descriptions".
 
+- **A3, 2026-10-27: hidden SDK retries removed from latency.** Made during
+  Step 1 (runs 1 and 2 done, run 3 at 14/30), approved by the user. Unlike A1
+  and A2, it comes after data, so it's a harness fix, not a rule change:
+  section 7d already said waits are excluded from latency.
+  - Found: run 3 swe-04 recorded 604.7 s and swe-06 704.1 s (normal is 5 to
+    9 s), each with 1 attempt and 0 s of rate-limit wait. The OpenAI SDK
+    retries up to 2 times inside the call the harness times. Its default
+    read timeout is 600 s and it caps a 429 wait at 120 s, so both rows
+    contain a request stuck until the timeout, then a retry.
+  - Fix: the harness turns SDK retries off (`max_retries=0`, eval only; app
+    code unchanged) and retries timeouts, connection errors, 408, 409 and
+    5xx itself, outside the timer. They're counted per row
+    (`transient_retries`, `transient_s`), not as first-attempt failures,
+    because the SDK hid them in runs 1 and 2 too.
+  - The two rows stay in the raw file. A `contaminated` marker row after
+    each makes the harness re-measure that JD. `score.py` reports both the
+    p95 with the re-measured values and `latency_p95_pooled_as_first_recorded_s`
+    with the originals.
+  - Not re-measured: run 3 swe-01 (20.6 s). That's below any SDK retry
+    signature I can prove, so it stays as a genuine slow sample. No row in
+    runs 1 or 2 is over 20 s.
+
 ## 10. Results
 
 ### Calibration (before Step 1), 2026-10-25

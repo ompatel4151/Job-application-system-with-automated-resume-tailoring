@@ -56,7 +56,9 @@ def score_run(rows, jds, checker, judge, keywords, ids):
     return {
         "jds_scored": len(ok), "jds_failed": len([i for i in ids if i in latest and not latest[i]["ok"]]),
         # Failures that a later re-run of the harness retried successfully.
-        "first_attempt_failures": len({r["jd_id"] for r in rows if not r["ok"] and r["jd_id"] in ids}),
+        "first_attempt_failures": len({r["jd_id"] for r in rows if not r["ok"] and not r.get("contaminated") and r["jd_id"] in ids}),
+        "remeasured": len({r["jd_id"] for r in rows if r.get("contaminated") and r["jd_id"] in ids}),
+        "transient_retries": sum(r.get("transient_retries", 0) for r in ok),
         "bullets": units,
         "invented_rate": invented / units if units else None,
         "checker_flag_rate": check_flags / units if units else None,
@@ -65,6 +67,8 @@ def score_run(rows, jds, checker, judge, keywords, ids):
         "blockers_caught": caught, "blocker_jds": len([i for i in blocker_jds if i in ids]),
         "blocker_false_positives": false_positives,
         "latencies": [r["latency_s"] for r in ok],
+        # The first ok row per JD, i.e. before any A3 re-measurement.
+        "latencies_first": [next(x["latency_s"] for x in rows if x["jd_id"] == r["jd_id"] and x["ok"]) for r in ok],
         "calls_mean": statistics.mean(len(r["calls"]) for r in ok) if ok else None,
         "tokens_mean": statistics.mean(sum(c["prompt_tokens"] + c["completion_tokens"] for c in r["calls"]) for r in ok) if ok else None,
         "cost_mean_usd": statistics.mean(cost(r["calls"]) for r in ok) if ok else None,
@@ -78,6 +82,7 @@ def summarize(runs):
         return {"median": statistics.median(values), "min": min(values), "max": max(values)} if values else None
 
     pooled = [x for r in runs for x in r["latencies"]]
+    first = [x for r in runs for x in r["latencies_first"]]
     return {
         "invented_rate": med_range("invented_rate"), "checker_flag_rate": med_range("checker_flag_rate"),
         "judge_flag_rate": med_range("judge_flag_rate"), "ats_mean": med_range("ats_mean"),
@@ -85,6 +90,7 @@ def summarize(runs):
         "blockers_caught": med_range("blockers_caught"),
         "latency_p50_pooled_s": pct(pooled, 0.5) if pooled else None,
         "latency_p95_pooled_s": pct(pooled, 0.95) if pooled else None,
+        "latency_p95_pooled_as_first_recorded_s": pct(first, 0.95) if first else None,
         "calls_mean": med_range("calls_mean"), "tokens_mean": med_range("tokens_mean"),
         "cost_mean_usd": med_range("cost_mean_usd"),
     }
@@ -106,7 +112,7 @@ def main():
             rows = read_jsonl(PRIVATE / "runs" / f"{a.mode}-{a.version}-run{n}.jsonl")
             if rows:
                 runs.append(score_run(rows, jds, checker, judge, keywords, ids))
-        report["runs"][subset] = [{k: v for k, v in r.items() if k != "latencies"} for r in runs]
+        report["runs"][subset] = [{k: v for k, v in r.items() if not k.startswith("latencies")} for r in runs]
         report[subset] = summarize(runs) if runs else None
     report["judge_calls"] = len(judge.calls)
     out = EVAL / "results" / f"{a.mode}-{a.version}.json"

@@ -7,8 +7,13 @@ Output: private/runs/<mode>-<version>-run<n>.jsonl, one line per JD (private:
 it holds resume text). Re-running the same command skips JDs already done, so a
 run can span several days of free-tier quota.
 
-Latency is the wall time of the successful attempt only. Pacing sleeps and
-waits after 429s are excluded and counted separately.
+Latency is the wall time of the successful attempt only. Pacing sleeps, waits
+after 429s and transient-error retries (timeouts, 5xx) are excluded and counted
+separately. The SDK's own retries are turned off, because they ran inside the
+timed call and hid there (amendment A3).
+
+A JD counts as done when its latest row is ok, so appending an ok=False row
+with "contaminated": true makes the next run re-measure it.
 """
 
 import argparse
@@ -28,6 +33,22 @@ def tailor_plain(base: dict, jd: dict):
 MODES = {"plain": tailor_plain}
 
 
+def transient(exc) -> bool:
+    """The errors the SDK used to retry on its own, minus 429 (handled apart)."""
+    return isinstance(exc, openai.APIConnectionError) or (
+        isinstance(exc, openai.APIStatusError) and (exc.status_code in (408, 409) or exc.status_code >= 500)
+    )
+
+
+def disable_sdk_retries():
+    init = openai.OpenAI.__init__
+
+    def no_retries(self, *args, **kwargs):
+        init(self, *args, **{**kwargs, "max_retries": 0})
+
+    openai.OpenAI.__init__ = no_retries
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--mode", choices=sorted(MODES), required=True)
@@ -45,15 +66,17 @@ def main():
     jds = load_jds()
     skip = holdout_ids(jds) if a.skip_holdout else set()
     out = PRIVATE / "runs" / f"{a.mode}-{a.version}-run{a.run}.jsonl"
-    done = {r["jd_id"] for r in read_jsonl(out) if r["ok"]}
+    latest = {r["jd_id"]: r for r in read_jsonl(out)}
+    done = {i for i, r in latest.items() if r["ok"]}
+    disable_sdk_retries()
     recorder = CallRecorder()
     recent: deque = deque()  # (time, tokens) of the last minute's calls
 
     for jd in jds:
         if jd["id"] in done or jd["id"] in skip:
             continue
-        rate_limit_waits = paced_seconds = 0.0
-        attempts = 0
+        rate_limit_waits = paced_seconds = transient_seconds = 0.0
+        attempts = transient_retries = 0
         while True:
             # Pace: keep the last minute's tokens plus a guess for this call under the limit.
             while recent and time.time() - recent[0][0] > 60:
@@ -74,7 +97,8 @@ def main():
                 append_jsonl(out, {
                     "jd_id": jd["id"], "ok": True, "latency_s": round(latency, 3), "calls": calls,
                     "attempts": attempts, "rate_limit_wait_s": round(rate_limit_waits, 1),
-                    "paced_s": round(paced_seconds, 1), "result": result.model_dump(),
+                    "paced_s": round(paced_seconds, 1), "transient_retries": transient_retries,
+                    "transient_s": round(transient_seconds, 1), "result": result.model_dump(),
                 })
                 print(f"{jd['id']}: ok in {latency:.1f}s, {len(calls)} call(s)")
                 break
@@ -86,6 +110,11 @@ def main():
                         raise SystemExit("Daily token quota reached. Re-run the same command tomorrow.") from exc
                     rate_limit_waits += 30
                     time.sleep(30)
+                    continue
+                if transient(cause):
+                    transient_retries += 1
+                    transient_seconds += time.perf_counter() - start + 5
+                    time.sleep(5)
                     continue
                 append_jsonl(out, {"jd_id": jd["id"], "ok": False, "error": str(exc), "calls": calls, "attempts": attempts})
                 print(f"{jd['id']}: FAILED: {exc}")
