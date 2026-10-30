@@ -12,8 +12,8 @@ import argparse
 import csv
 import random
 
-from checker import Checker, bullets_of
-from common import LABEL_SEED, PRIVATE, load_facts, read_jsonl
+from common import LABEL_SEED, PRIVATE, load_facts, read_jsonl  # first: loads backend/.env
+from checker import Checker, bullets_of  # noqa: I001
 from judge import Judge
 
 

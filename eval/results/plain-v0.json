@@ -1,0 +1,219 @@
+{
+  "mode": "plain",
+  "version": "v0",
+  "eval_set": 30,
+  "runs": {
+    "all": [
+      {
+        "jds_scored": 30,
+        "jds_failed": 0,
+        "first_attempt_failures": 1,
+        "remeasured": 0,
+        "transient_retries": 0,
+        "bullets": 397,
+        "invented_rate": 0.28967254408060455,
+        "checker_flag_rate": 0.012594458438287154,
+        "judge_flag_rate": 0.28463476070528965,
+        "ats_mean": 79.26666666666667,
+        "blockers_caught": 0,
+        "blocker_jds": 5,
+        "blocker_false_positives": 0,
+        "calls_mean": 1,
+        "tokens_mean": 4858.7,
+        "cost_mean_usd": 0.001824165,
+        "rate_limit_wait_s": 0.0
+      },
+      {
+        "jds_scored": 30,
+        "jds_failed": 0,
+        "first_attempt_failures": 0,
+        "remeasured": 0,
+        "transient_retries": 0,
+        "bullets": 409,
+        "invented_rate": 0.35207823960880197,
+        "checker_flag_rate": 0.02444987775061125,
+        "judge_flag_rate": 0.3471882640586797,
+        "ats_mean": 79.63333333333334,
+        "blockers_caught": 0,
+        "blocker_jds": 5,
+        "blocker_false_positives": 0,
+        "calls_mean": 1,
+        "tokens_mean": 4878.033333333334,
+        "cost_mean_usd": 0.0018357649999999998,
+        "rate_limit_wait_s": 0.0
+      },
+      {
+        "jds_scored": 30,
+        "jds_failed": 0,
+        "first_attempt_failures": 0,
+        "remeasured": 2,
+        "transient_retries": 0,
+        "bullets": 391,
+        "invented_rate": 0.3273657289002558,
+        "checker_flag_rate": 0.020460358056265986,
+        "judge_flag_rate": 0.3248081841432225,
+        "ats_mean": 80.73333333333333,
+        "blockers_caught": 0,
+        "blocker_jds": 5,
+        "blocker_false_positives": 0,
+        "calls_mean": 1,
+        "tokens_mean": 4930.733333333334,
+        "cost_mean_usd": 0.0018673849999999998,
+        "rate_limit_wait_s": 0.0
+      }
+    ],
+    "holdout": [
+      {
+        "jds_scored": 10,
+        "jds_failed": 0,
+        "first_attempt_failures": 1,
+        "remeasured": 0,
+        "transient_retries": 0,
+        "bullets": 137,
+        "invented_rate": 0.3284671532846715,
+        "checker_flag_rate": 0.014598540145985401,
+        "judge_flag_rate": 0.3284671532846715,
+        "ats_mean": 78.1,
+        "blockers_caught": 0,
+        "blocker_jds": 2,
+        "blocker_false_positives": 0,
+        "calls_mean": 1,
+        "tokens_mean": 4846.9,
+        "cost_mean_usd": 0.0018163049999999998,
+        "rate_limit_wait_s": 0.0
+      },
+      {
+        "jds_scored": 10,
+        "jds_failed": 0,
+        "first_attempt_failures": 0,
+        "remeasured": 0,
+        "transient_retries": 0,
+        "bullets": 135,
+        "invented_rate": 0.42962962962962964,
+        "checker_flag_rate": 0.037037037037037035,
+        "judge_flag_rate": 0.4222222222222222,
+        "ats_mean": 79.2,
+        "blockers_caught": 0,
+        "blocker_jds": 2,
+        "blocker_false_positives": 0,
+        "calls_mean": 1,
+        "tokens_mean": 4754.2,
+        "cost_mean_usd": 0.001760685,
+        "rate_limit_wait_s": 0.0
+      },
+      {
+        "jds_scored": 10,
+        "jds_failed": 0,
+        "first_attempt_failures": 0,
+        "remeasured": 2,
+        "transient_retries": 0,
+        "bullets": 138,
+        "invented_rate": 0.3695652173913043,
+        "checker_flag_rate": 0.028985507246376812,
+        "judge_flag_rate": 0.3695652173913043,
+        "ats_mean": 78.8,
+        "blockers_caught": 0,
+        "blocker_jds": 2,
+        "blocker_false_positives": 0,
+        "calls_mean": 1,
+        "tokens_mean": 5100.4,
+        "cost_mean_usd": 0.001968405,
+        "rate_limit_wait_s": 0.0
+      }
+    ]
+  },
+  "all": {
+    "invented_rate": {
+      "median": 0.3273657289002558,
+      "min": 0.28967254408060455,
+      "max": 0.35207823960880197
+    },
+    "checker_flag_rate": {
+      "median": 0.020460358056265986,
+      "min": 0.012594458438287154,
+      "max": 0.02444987775061125
+    },
+    "judge_flag_rate": {
+      "median": 0.3248081841432225,
+      "min": 0.28463476070528965,
+      "max": 0.3471882640586797
+    },
+    "ats_mean": {
+      "median": 79.63333333333334,
+      "min": 79.26666666666667,
+      "max": 80.73333333333333
+    },
+    "ats_mean_pooled": 79.87777777777778,
+    "blockers_caught": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "latency_p50_pooled_s": 5.776,
+    "latency_p95_pooled_s": 9.446,
+    "latency_p95_pooled_as_first_recorded_s": 18.66,
+    "calls_mean": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "tokens_mean": {
+      "median": 4878.033333333334,
+      "min": 4858.7,
+      "max": 4930.733333333334
+    },
+    "cost_mean_usd": {
+      "median": 0.0018357649999999998,
+      "min": 0.001824165,
+      "max": 0.0018673849999999998
+    }
+  },
+  "holdout": {
+    "invented_rate": {
+      "median": 0.3695652173913043,
+      "min": 0.3284671532846715,
+      "max": 0.42962962962962964
+    },
+    "checker_flag_rate": {
+      "median": 0.028985507246376812,
+      "min": 0.014598540145985401,
+      "max": 0.037037037037037035
+    },
+    "judge_flag_rate": {
+      "median": 0.3695652173913043,
+      "min": 0.3284671532846715,
+      "max": 0.4222222222222222
+    },
+    "ats_mean": {
+      "median": 78.8,
+      "min": 78.1,
+      "max": 79.2
+    },
+    "ats_mean_pooled": 78.7,
+    "blockers_caught": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "latency_p50_pooled_s": 5.983,
+    "latency_p95_pooled_s": 20.561,
+    "latency_p95_pooled_as_first_recorded_s": 604.67,
+    "calls_mean": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "tokens_mean": {
+      "median": 4846.9,
+      "min": 4754.2,
+      "max": 5100.4
+    },
+    "cost_mean_usd": {
+      "median": 0.0018163049999999998,
+      "min": 0.001760685,
+      "max": 0.001968405
+    }
+  },
+  "judge_calls": 24,
+  "judge_incomplete_replies": 0
+}

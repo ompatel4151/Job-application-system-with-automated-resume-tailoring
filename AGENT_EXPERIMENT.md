@@ -446,6 +446,76 @@ later.
 Re-run under amendment A1 (one call for all 13 units): **0 flagged**, 3,019
 tokens (2,787 in, 232 out), 1.2 s.
 
-Step 1 hasn't started. It needs the 30 JDs. Every run gets appended here with the date, commit,
-command, environment, eval-set size and run number, and mirrored in
-RESUME_FACTS.md.
+### Step 1: baseline (plain mode, v0)
+
+- **Command:** `run_eval.py --mode plain --version v0 --run N` for N = 1, 2, 3, then
+  `score.py --mode plain --version v0`. Aggregates are in
+  `eval/results/plain-v0.json`.
+- **When:**
+  - Run 1 finished 2026-10-26 and run 2 later that day, both at commit `d4efacf`.
+  - Run 3 finished 2026-10-27. Its first 14 JDs ran at `d4efacf`. The
+    rest, including the 2 re-measured under A3, ran at `d1109a1`.
+  - Scored 2026-10-29 to 2026-10-30.
+- **Environment:**
+  - my Mac, calling the service function directly
+  - free-tier Groq: `openai/gpt-oss-120b` tailors, `qwen/qwen3.8-27b` judges
+  - eval set: 30 synthetic JDs (A2), 3 runs
+- **Every run is shown;** none is dropped.
+
+| Run | JDs ok | Units | Invented (union) | Checker | Judge | ATS mean | Blockers | Tokens/tailoring (mean) | Est. cost/tailoring | Latency p50 / p95 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 30/30 | 397 | 115 (29.0%) | 5 (1.3%) | 113 (28.5%) | 79.3 | 0/5 | 4,858.7 | $0.00182 | 5.73 s / 8.07 s |
+| 2 | 30/30 | 409 | 144 (35.2%) | 10 (2.4%) | 142 (34.7%) | 79.6 | 0/5 | 4,878.0 | $0.00184 | 5.73 s / 8.07 s |
+| 3 | 30/30 | 391 | 128 (32.7%) | 8 (2.0%) | 127 (32.5%) | 80.7 | 0/5 | 4,930.7 | $0.00187 | 6.13 s / 20.56 s |
+| **Median (range)** | | | **32.7% (29.0 to 35.2)** | 2.0% (1.3 to 2.4) | 32.5% (28.5 to 34.7) | 79.6 (79.3 to 80.7) | 0/5 | 4,878.0 | $0.00184 | |
+
+- **Pooled over all 90 tailorings:**
+  - ATS mean: 79.9
+  - Latency p50: 5.78 s
+  - Latency p95: 9.45 s (nearest rank; that's what rule 4 uses)
+  - p95 with the 2 original A3 rows in place of their re-measurements: 18.66 s
+  - Slowest calls with 0 retries: data-06 in run 3 (85.5 s), and aiml-03 and
+    swe-01 in run 3 (18.7 s and 20.6 s).
+- **Held-out 10 only:**
+  - Invented, median of 3 runs: 37.0% (32.8 to 43.0)
+  - ATS, pooled: 78.7
+  - Latency p95, pooled over 30: 20.56 s (604.67 s as first recorded)
+- **Failures:**
+  - 1 first-attempt failure in 90: run 1, swe-06, a Groq
+    `json_validate_failed`; it succeeded on re-run.
+  - 0 transient retries after A3.
+  - 0 tailoring 429 waits counted, though pacing kept the harness under the
+    per-minute limit.
+- **Blockers:** 0/5 in every run, as registered in 7c. Plain mode has no
+  blockers field. 0 false positives.
+- **Cost:** an estimate at the list prices in `eval/prices.json`, read
+  2026-10-25. The free tier billed $0.
+- **Judge:**
+  - 24 calls in the final scoring session; earlier sessions' verdicts were
+    cached.
+  - 1 incomplete reply (10 verdicts for 12 bullets) in the session that
+    crashed. That's what led to the partial-reply retry in `judge.py`. The
+    final session had 0.
+
+**What the baseline means for the agent's targets** (arithmetic on the
+numbers above, not new rules):
+
+| Rule | Baseline | What it requires |
+|---|---|---|
+| 1 | 32.7% invented | at most 5% (the 50%-drop bound is 16.4%; 5% is stricter) |
+| 2 | 79.9 mean ATS | 77.9 or more |
+| 3 | 0/5 | at least 4/5 |
+| 4 | p95 9.45 s, $0.00184 | p95 at most 18.9 s (stricter than 20 s); cost at most $0.00367 |
+
+**Caveats:**
+- **The checker and the judge disagree a lot:** the checker flags about 2%,
+  the judge about 32%. Almost all of the union comes from the judge.
+- **Not checked yet:** whether the judge is right. My blind hand labels
+  (79 bullets, a random 20% of run 1, made 2026-10-29) will settle that for
+  rule 6.
+- **Kept blind on purpose:** I haven't read the judge's reasons, and I won't
+  show them before the labels are done, so they can't bias the labels.
+- If rule 6 fails, the headline number isn't trustworthy, and section 6 says
+  so.
+- **Run 3's latency p95 (20.56 s) is driven by its slowest few calls.**
+  That's 3 runs of 30 on a shared free tier.

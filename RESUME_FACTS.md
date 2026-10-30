@@ -172,3 +172,21 @@ readiness heuristic, not a prediction.
 | 92% backend line coverage (1,193 statements, 94 missed). | local, same run | `pytest --cov=app` |
 | 18 API endpoints under `/api` (plus `/health` and `/metrics`). | local | Counted from the OpenAPI schema |
 | Live bugs found and fixed after deploy: sign-in buttons that never submitted (Base UI defaults to `type="button"`); PDF titles running into the dates; 43 non-breaking hyphens and 19 narrow spaces printing as "?"; an ATS keyword count (5 of 19) that contradicted the AI's lists. Each fix shipped with a regression test. | live, then local tests | Reproduced from the live PDF and the Render request logs |
+
+## Agent experiment, Step 1: baseline (plain mode), branch `experiment/grounded-agent`
+
+These numbers are for the existing one-call tailoring, measured before any agent
+code exists. They're on 30 synthetic job descriptions, not real postings or
+users. Full table and caveats: AGENT_EXPERIMENT.md, section 10.
+
+| Fact | Where | How |
+|---|---|---|
+| 90 tailorings (30 synthetic JDs × 3 runs): 90 succeeded; 1 needed a re-run after a Groq `json_validate_failed`. | my Mac, free-tier Groq, `openai/gpt-oss-120b`, 2026-10-26 to 2026-10-27 | `eval/run_eval.py --mode plain --version v0 --run 1/2/3` |
+| Invented-fact rate (bullets the checker or the judge found unsupported by my fact sheet): median 32.7% across 3 runs (range 29.0% to 35.2%). Checker alone: 2.0%; judge alone: 32.5%. **Not yet validated against my hand labels**, so not a headline number yet. | same, judge `qwen/qwen3.8-27b` | `eval/score.py --mode plain --version v0` |
+| Mean ATS score: 79.9 over 90 tailorings, against frozen per-JD keywords. | same | same |
+| Latency: pooled p50 5.78 s, p95 9.45 s (90 tailorings, network to Groq included). | same | same, after amendment A3 |
+| Cost: 1 LLM call and about 4,878 tokens per tailoring, about $0.0018 at list price (the free tier billed $0). | same | token counts from the API, prices from `eval/prices.json` |
+| A measurement bug found and fixed: the OpenAI SDK's silent retries put a 600 s timeout into two latency samples (604.7 s, 704.1 s). The harness now retries outside the timer and re-measured them (6.1 s, 6.7 s); both versions are reported. | same | amendment A3 |
+
+Not measured yet: the agent (Step 2 isn't built), hand-label agreement (rule 6),
+any comparison between the two.

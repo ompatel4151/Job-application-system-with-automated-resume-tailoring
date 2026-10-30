@@ -54,13 +54,28 @@ class Judge:
         self.path = PRIVATE / "judge_cache.json"
         self.cache = json.loads(self.path.read_text()) if self.path.exists() else {}
         self.calls: list[dict] = []
+        self.incomplete = 0
 
     def _key(self, bullet: str) -> str:
         return f"{METHOD}:{self.sheet}:{sha(bullet)}"
 
     def verdicts(self, bullets: list[str]) -> list[JudgeVerdict]:
-        """One call for every bullet not cached yet; a verdict per bullet, in order."""
-        todo = list(dict.fromkeys(b for b in bullets if self._key(b) not in self.cache))
+        """One call for every bullet not cached yet; a verdict per bullet, in order.
+
+        A reply that skips bullets, or fails Groq's JSON validation, is counted
+        in self.incomplete; the verdicts it did give are kept and only the
+        missing bullets are asked again, up to 3 times."""
+        for _ in range(3):
+            todo = list(dict.fromkeys(b for b in bullets if self._key(b) not in self.cache))
+            if not todo:
+                break
+            self._judge(todo)
+        else:
+            if any(self._key(b) not in self.cache for b in bullets):
+                raise RuntimeError("Judge skipped bullets 3 times in a row; re-run later (results are cached).")
+        return [JudgeVerdict(**self.cache[self._key(b)]) for b in bullets]
+
+    def _judge(self, todo: list[str]) -> None:
         if todo:
             listing = "\n".join(f"<bullet index=\"{i}\">{b}</bullet>" for i, b in enumerate(todo))
             for attempt in range(6):
@@ -77,20 +92,23 @@ class Judge:
                     break
                 except openai.RateLimitError:
                     time.sleep(30 * (attempt + 1))
+                except openai.BadRequestError as exc:
+                    if "json_validate_failed" not in str(exc):
+                        raise
+                    self.incomplete += 1
+                    return
             else:
                 raise SystemExit("Judge rate-limited 6 times in a row; re-run later (results are cached).")
             self.calls.append({"model": JUDGE_MODEL, "prompt_tokens": r.usage.prompt_tokens,
                                "completion_tokens": r.usage.completion_tokens,
                                "seconds": round(time.perf_counter() - start, 3)})
             items = _Batch.model_validate_json(r.choices[0].message.content).verdicts
-            by_index = {it.index: it for it in items}
-            if sorted(by_index) != list(range(len(todo))):
-                raise RuntimeError(f"Judge returned indices {sorted(by_index)} for {len(todo)} bullets")
-            for i, b in enumerate(todo):
-                it = by_index[i]
-                self.cache[self._key(b)] = {"supported": it.supported, "unsupported_claim": it.unsupported_claim}
+            by_index = {it.index: it for it in items if 0 <= it.index < len(todo)}
+            if len(by_index) < len(todo):
+                self.incomplete += 1
+            for i, it in by_index.items():
+                self.cache[self._key(todo[i])] = {"supported": it.supported, "unsupported_claim": it.unsupported_claim}
             self.path.write_text(json.dumps(self.cache))
-        return [JudgeVerdict(**self.cache[self._key(b)]) for b in bullets]
 
     def verdict(self, bullet: str) -> JudgeVerdict:
         return self.verdicts([bullet])[0]

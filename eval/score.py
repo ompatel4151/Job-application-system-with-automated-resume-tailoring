@@ -9,8 +9,8 @@ import argparse
 import json
 import statistics
 
-from checker import Checker, bullets_of
-from common import EVAL, PRIVATE, holdout_ids, load_facts, load_jds, read_jsonl
+from common import EVAL, PRIVATE, holdout_ids, load_facts, load_jds, read_jsonl  # first: loads backend/.env
+from checker import Checker, bullets_of  # noqa: I001
 from judge import Judge
 
 PRICES = json.loads((EVAL / "prices.json").read_text())
@@ -115,6 +115,7 @@ def main():
         report["runs"][subset] = [{k: v for k, v in r.items() if not k.startswith("latencies")} for r in runs]
         report[subset] = summarize(runs) if runs else None
     report["judge_calls"] = len(judge.calls)
+    report["judge_incomplete_replies"] = judge.incomplete
     out = EVAL / "results" / f"{a.mode}-{a.version}.json"
     out.write_text(json.dumps(report, indent=2))
     print(json.dumps(report["all"], indent=2))
