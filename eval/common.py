@@ -35,9 +35,9 @@ def load_facts() -> list[Fact]:
     return [Fact(**{k: v for k, v in f.items() if k != "verified"}) for f in raw]
 
 
-def load_jds() -> list[dict]:
+def load_jds(path=None) -> list[dict]:
     # Synthetic and public (amendment A2), so the eval set itself can be checked.
-    jds = yaml.safe_load((EVAL / "jds.yaml").read_text())
+    jds = yaml.safe_load((EVAL / (path or "jds.yaml")).read_text())
     ids = [j["id"] for j in jds]
     assert len(ids) == len(set(ids)), "duplicate JD ids"
     return jds

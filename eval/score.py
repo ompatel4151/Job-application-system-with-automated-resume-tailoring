@@ -72,7 +72,13 @@ def score_run(rows, jds, checker, judge, keywords, ids):
         "calls_mean": statistics.mean(len(r["calls"]) for r in ok) if ok else None,
         "tokens_mean": statistics.mean(sum(c["prompt_tokens"] + c["completion_tokens"] for c in r["calls"]) for r in ok) if ok else None,
         "cost_mean_usd": statistics.mean(cost(r["calls"]) for r in ok) if ok else None,
-        "rate_limit_wait_s": sum(r.get("rate_limit_wait_s", 0) for r in ok),
+        "rate_limit_wait_s": sum(r.get("rate_limit_wait_s", 0) + r.get("inner_wait_s", 0) for r in ok),
+        # Agent mode only: runs where the agent gave up and plain mode wrote the resume.
+        "fallbacks": sum(bool((r.get("trace") or {}).get("fallback")) for r in ok),
+        "fallback_reasons": sorted((r.get("trace") or {}).get("fallback") for r in ok
+                                   if (r.get("trace") or {}).get("fallback")),
+        "postcheck_rejected": sum((r.get("trace") or {}).get("rejected", 0) for r in ok),
+        "postcheck_dropped": sum((r.get("trace") or {}).get("dropped", 0) for r in ok),
     }
 
 

@@ -11,6 +11,8 @@ import json
 import re
 from dataclasses import dataclass, field
 
+import openai
+
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app import observability
@@ -253,5 +255,8 @@ def dispatch(run: Run, name: str, arguments: str) -> str:
     except (ValidationError, ToolError) as exc:
         observability.AGENT_TOOL_CALLS.labels(name, "error").inc()
         return json.dumps({"error": str(exc)})
+    except openai.BadRequestError as exc:  # e.g. Groq's json_validate_failed on a draft
+        observability.AGENT_TOOL_CALLS.labels(name, "error").inc()
+        return json.dumps({"error": f"the model's output was rejected ({exc.status_code}); try again"})
     observability.AGENT_TOOL_CALLS.labels(name, "ok").inc()
     return json.dumps(result)

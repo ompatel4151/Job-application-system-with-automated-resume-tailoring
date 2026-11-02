@@ -317,3 +317,25 @@ def test_pinecone_down_raises_a_fallback():
 def test_no_facts_raises_a_fallback():
     with pytest.raises(Fallback, match="no_facts"):
         run(ScriptedLLM([]), facts=[])
+
+
+def test_a_rejected_model_output_is_a_tool_error_and_the_run_goes_on():
+    import httpx
+    import openai
+
+    class FlakyDrafts(ScriptedLLM):
+        def json(self, system, user, schema):
+            if schema is not Requirements and not getattr(self, "failed", False):
+                self.failed = True
+                self.calls += 1
+                request = httpx.Request("POST", "https://api.groq.com")
+                raise openai.BadRequestError("json_validate_failed", response=httpx.Response(400, request=request),
+                                             body=None)
+            return super().json(system, user, schema)
+
+    llm = FlakyDrafts([call("draft_bullets", section="summary", fact_ids=["jt-redis"]),
+                       call("draft_bullets", section="summary", fact_ids=["jt-redis"])],
+                      drafts=[draft(("Built a Redis Lua token bucket.", ["jt-redis"]))])
+    result, _ = run(llm)
+
+    assert result.tailored_resume.summary == "Built a Redis Lua token bucket."
