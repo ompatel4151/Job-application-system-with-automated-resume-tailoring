@@ -188,5 +188,7 @@ users. Full table and caveats: AGENT_EXPERIMENT.md, section 10.
 | Cost: 1 LLM call and about 4,878 tokens per tailoring, about $0.0018 at list price (the free tier billed $0). | same | token counts from the API, prices from `eval/prices.json` |
 | A measurement bug found and fixed: the OpenAI SDK's silent retries put a 600 s timeout into two latency samples (604.7 s, 704.1 s). The harness now retries outside the timer and re-measured them (6.1 s, 6.7 s); both versions are reported. | same | amendment A3 |
 
-Not measured yet: the agent (Step 2 isn't built), hand-label agreement (rule 6),
-any comparison between the two.
+| Hand-label check (rule 6): I labeled a random 20% of run 1 (79 bullets) blind; 14 were unsupported (17.7%). The checker + judge union agreed with me on 58/79 (73.4%), under the pre-registered 85% bar, so the automatic invented-fact number isn't trustworthy and rule 6 fails. The judge flagged 18 bullets I called supported. | my labels, 2026-11-02 | `eval/label_sheet.py agree --mode plain --version v0` |
+
+Not measured yet: the agent (Step 2 isn't built) and any comparison between the
+two modes.
