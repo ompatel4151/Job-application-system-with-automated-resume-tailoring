@@ -517,5 +517,14 @@ numbers above, not new rules):
   show them before the labels are done, so they can't bias the labels.
 - If rule 6 fails, the headline number isn't trustworthy, and section 6 says
   so.
+- **Hand labels, first submission (2026-11-02): all 79 "supported".**
+  - Union agreement was 63.3% (checker 96.2%, judge 64.6%).
+  - It's not used for rule 6. Two sampled bullets contain numbers
+    that appear nowhere on the fact sheet: 80% and 99.9%, both flagged by the
+    checker. So "all supported" couldn't be a row-by-row reading.
+  - The user chose to re-label row by row. Before that, they were shown only
+    those two checker findings, none of the judge's verdicts.
+  - The first submission is kept privately as
+    `private/labels/plain-v0.first-submission.csv`.
 - **Run 3's latency p95 (20.56 s) is driven by its slowest few calls.**
   That's 3 runs of 30 on a shared free tier.

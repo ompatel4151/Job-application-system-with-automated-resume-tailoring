@@ -3,13 +3,17 @@
   ../.venv/bin/python label_sheet.py make --mode plain --version v0
       Draws a random 20% of run 1's bullets (fixed seed) into
       private/labels/<mode>-<version>.csv with an empty "label" column and no
-      automatic labels, so you label blind. Fill in supported / unsupported.
+      automatic labels, so you label blind.
+  ../.venv/bin/python label_sheet.py label --mode plain --version v0
+      Label one bullet at a time in the terminal (s / u / b / q), saved after
+      every answer.
   ../.venv/bin/python label_sheet.py agree --mode plain --version v0
       Agreement of the checker, the judge and their union with your labels.
 """
 
 import argparse
 import csv
+import os
 import random
 
 from common import LABEL_SEED, PRIVATE, load_facts, read_jsonl  # first: loads backend/.env
@@ -24,9 +28,38 @@ def bullets(mode, version):
             for i, b in enumerate(bullets_of(r["result"]["tailored_resume"]))]
 
 
+def label(path):
+    """One bullet at a time, saved after every answer; starts at the first
+    unlabeled row. Shows nothing from the checker or the judge."""
+    rows = list(csv.DictReader(path.open(newline="")))
+    keys = {"s": "supported", "u": "unsupported"}
+    i = next((n for n, r in enumerate(rows) if not r["label"]), len(rows))
+    while i < len(rows):
+        r = rows[i]
+        now = f"  (now: {r['label']})" if r["label"] else ""
+        print(f"\n[{i + 1}/{len(rows)}] {r['jd_id']}{now}\n  {r['bullet']}")
+        key = input("s = supported, u = unsupported, b = back, q = quit: ").strip().lower()
+        if key == "q":
+            break
+        if key == "b":
+            i = max(0, i - 1)
+            continue
+        if key not in keys:
+            continue
+        r["label"] = keys[key]
+        tmp = path.with_suffix(".tmp")
+        with tmp.open("w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=["jd_id", "index", "bullet", "label"])
+            w.writeheader()
+            w.writerows(rows)
+        os.replace(tmp, path)  # a Ctrl+C mid-write can't leave a half-written sheet
+        i += 1
+    print(f"\n{sum(bool(r['label']) for r in rows)}/{len(rows)} labeled -> {path}")
+
+
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("action", choices=["make", "agree"])
+    p.add_argument("action", choices=["make", "label", "agree"])
     p.add_argument("--mode", required=True)
     p.add_argument("--version", required=True)
     a = p.parse_args()
@@ -43,6 +76,8 @@ def main():
             w.writerows([jd, i, b, ""] for jd, i, b in sample)
         print(f"{len(sample)} of {len(items)} bullets -> {path}")
         return
+    if a.action == "label":
+        return label(path)
     facts = load_facts()
     checker, judge = Checker(facts), Judge(facts)
     rows = list(csv.DictReader(path.open()))
