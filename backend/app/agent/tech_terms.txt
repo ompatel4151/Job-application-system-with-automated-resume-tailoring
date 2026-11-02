@@ -1,0 +1,206 @@
+# Named tools, technologies and methods the checker looks for in bullets.
+# Fixed before Step 1 (AGENT_EXPERIMENT.md section 7a); additions after that are
+# recorded with a date and apply to every run re-scored afterwards.
+# Matching: whole word; terms of 3 characters or fewer match case-sensitively
+# ("Go", "C", "Git"), longer ones ignore case. Ambiguous English words are
+# left out on purpose (e.g. "Express", "Spring" alone).
+# Languages
+Python
+Java
+JavaScript
+TypeScript
+C
+C++
+C#
+Go
+Golang
+Rust
+Kotlin
+Swift
+Scala
+Ruby
+PHP
+R
+MATLAB
+Perl
+Bash
+SQL
+HTML
+CSS
+Dart
+Elixir
+Haskell
+Lua
+Solidity
+# Frontend and mobile
+React
+React Native
+Next.js
+Vue
+Vue.js
+Angular
+Svelte
+Redux
+TanStack Query
+Tailwind CSS
+Tailwind
+Bootstrap
+jQuery
+Flutter
+SwiftUI
+Android
+iOS
+Webpack
+Vite
+# Backend frameworks
+FastAPI
+Flask
+Django
+Express.js
+Node.js
+NestJS
+Spring Boot
+.NET
+ASP.NET
+Ruby on Rails
+Rails
+Laravel
+GraphQL
+gRPC
+REST APIs
+OpenAPI
+WebSockets
+SQLAlchemy
+Pydantic
+Celery
+Alembic
+Hibernate
+Prisma
+# Data stores and messaging
+PostgreSQL
+Postgres
+MySQL
+Oracle
+SQLite
+SQL Server
+MongoDB
+Redis
+Cassandra
+DynamoDB
+Elasticsearch
+OpenSearch
+Snowflake
+BigQuery
+Redshift
+Databricks
+Supabase
+Firebase
+Kafka
+RabbitMQ
+SQS
+Pinecone
+FAISS
+pgvector
+Neo4j
+# Cloud and infrastructure
+AWS
+GCP
+Google Cloud
+Azure
+EC2
+S3
+Lambda
+ECS
+EKS
+Fargate
+CloudFront
+Cloud Run
+Kubernetes
+Docker
+Terraform
+Ansible
+Helm
+Nginx
+Linux
+Windows Server
+Vercel
+Render
+Heroku
+Netlify
+Cloudflare
+Prometheus
+Grafana
+Datadog
+Splunk
+OpenTelemetry
+# CI/CD and tooling
+GitHub Actions
+GitLab CI
+Jenkins
+CircleCI
+CI/CD
+Git
+Maven
+Gradle
+npm
+# Testing
+pytest
+Vitest
+Jest
+Playwright
+Cypress
+Selenium
+JUnit
+JUnit 5
+Mocha
+# Data and ML
+pandas
+NumPy
+SciPy
+scikit-learn
+PyTorch
+TensorFlow
+Keras
+ONNX
+Hugging Face
+Transformers
+LangChain
+LlamaIndex
+OpenAI
+Anthropic
+Claude
+GPT-4
+Llama
+Whisper
+RAG
+LLM-as-judge
+spaCy
+NLTK
+Spark
+PySpark
+Hadoop
+Airflow
+dbt
+Tableau
+Power BI
+Looker
+Excel
+Jupyter
+ConnectBI
+# Methods and concepts that read as claims of specific work
+microservices
+Kubernetes operators
+row-level security
+idempotency keys
+token bucket
+cursor pagination
+EXPLAIN ANALYZE
+load testing
+A/B testing
+OAuth
+JWT
+JWKS
+SAML
+SSO
+Agile
+Scrum

@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     # separate multimodal model (best-effort JSON, not strict schemas).
     groq_vision_model: str = "qwen/qwen3.6-27b"
 
+    # "agent" tailors with the grounded agent (app/agent), falling back to
+    # plain mode on any failure; "plain" is the single LLM call.
+    tailor_mode: Literal["plain", "agent"] = "plain"
+    # Pinecone holds each user's facts and past job descriptions for the agent,
+    # one namespace per user. Unset: agent mode always falls back to plain.
+    pinecone_api_key: str | None = None
+    pinecone_index: str = "job-tracker-facts"
+
     def api_key_matches(self, provided: str | None) -> bool:
         """True only if a key is configured and `provided` equals it.
 

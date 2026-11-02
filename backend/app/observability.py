@@ -31,6 +31,15 @@ LATENCY = Histogram(
 )
 RATE_LIMITED = Counter("rate_limit_rejections_total", "Requests refused with 429", ["bucket"])
 REDIS_ERRORS = Counter("ratelimit_redis_errors_total", "Rate-limit checks that couldn't reach Redis")
+VECTOR_ERRORS = Counter("vector_store_errors_total", "Pinecone calls that failed")
+VECTOR_FOREIGN_HITS = Counter(
+    "vector_store_foreign_hits_total", "Search hits owned by another user, dropped (should stay 0)"
+)
+AGENT_RUNS = Counter("agent_runs_total", "Agent-mode tailorings", ["outcome"])  # ok / fallback
+AGENT_FALLBACKS = Counter("agent_fallbacks_total", "Agent runs that fell back to plain mode", ["reason"])
+AGENT_STEPS = Histogram("agent_steps", "Model turns per agent run", buckets=(1, 2, 3, 4, 5, 6))
+AGENT_TOOL_CALLS = Counter("agent_tool_calls_total", "Agent tool calls", ["tool", "outcome"])
+POSTCHECK = Counter("agent_postcheck_total", "Citation post-check results", ["outcome"])  # pass / reject / drop
 LLM_LATENCY = Histogram(
     "llm_call_duration_seconds", "Time spent waiting for the LLM", ["provider", "operation"],
     buckets=(0.5, 1, 2.5, 5, 10, 20, 30, 60, 120),

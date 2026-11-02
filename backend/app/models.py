@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Index, Integer, String, Text, Uuid
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Index, Integer, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -90,6 +90,9 @@ class TailoredResume(Base):
     content: Mapped[dict] = mapped_column(JSON, nullable=False)
     match_analysis: Mapped[dict] = mapped_column(JSON, nullable=False)
     markdown: Mapped[str] = mapped_column(Text, nullable=False)
+    # Agent mode only: blockers, citations, steps, post-check rejections, and
+    # why it fell back to plain mode if it did. Null for plain mode.
+    agent_trace: Mapped[dict | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     application: Mapped["Application"] = relationship(back_populates="tailored_resumes")
@@ -110,4 +113,33 @@ class IdempotencyKey(Base):
     status_code: Mapped[int | None] = mapped_column(Integer)
     response_body: Mapped[dict | None] = mapped_column(JSON)
     # ponytail: keys are kept forever; delete rows older than ~24h if the table grows.
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ResumeFact(Base):
+    """One verified fact the agent may build bullets from (AGENT_EXPERIMENT.md 3.1)."""
+
+    __tablename__ = "resume_facts"
+    __table_args__ = (UniqueConstraint("user_id", "fact_id", name="uq_resume_facts_user_fact"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    # The user's own id for the fact, e.g. "jt-index"; bullets cite it.
+    fact_id: Mapped[str] = mapped_column(String(40), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    numbers: Mapped[list] = mapped_column(JSON, nullable=False)
+    tools: Mapped[list] = mapped_column(JSON, nullable=False)
+    context: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AgentMemory(Base):
+    """A preference the user wrote for the agent; never written by the model."""
+
+    __tablename__ = "agent_memories"
+    __table_args__ = (Index("ix_agent_memories_user_created", "user_id", "created_at", "id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    text: Mapped[str] = mapped_column(String(500), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

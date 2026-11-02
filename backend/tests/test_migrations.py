@@ -15,7 +15,8 @@ from sqlalchemy import create_engine, inspect, text
 from app.database import BASELINE, Base, _normalize, alembic_config, migrate
 
 PG_URL = os.environ.get("TEST_POSTGRES_URL")
-TABLES = {"applications", "resumes", "tailored_resumes", "idempotency_keys"}
+TABLES = {"applications", "resumes", "tailored_resumes", "idempotency_keys",
+          "resume_facts", "agent_memories"}
 
 
 def _wipe(url):
@@ -86,7 +87,7 @@ def test_a_database_built_before_migrations_is_adopted(db_url):
 
 
 def test_postgres_tables_have_row_level_security_on(db_url):
-    """Matches the live Supabase database, where RLS is on for all 4 tables."""
+    """Matches the live Supabase database, where RLS is on for every table."""
     if db_url.startswith("sqlite"):
         pytest.skip("RLS is Postgres-only")
     migrate(db_url)

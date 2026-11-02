@@ -159,6 +159,29 @@ class TailorRequest(BaseModel):
     resume_id: int | None = None
 
 
+class Citation(BaseModel):
+    text: str
+    fact_ids: list[str]
+
+
+class AgentTrace(BaseModel):
+    """What agent mode did (AGENT_EXPERIMENT.md 3.3). Plain mode has none."""
+
+    # Job requirements the candidate may not meet, e.g. no visa sponsorship.
+    blockers: list[str] = []
+    # Each agent-written bullet and the fact ids it cites.
+    citations: list[Citation] = []
+    steps: int = 0
+    tool_calls: int = 0
+    llm_calls: int = 0
+    # Bullets the post-check rejected (each gets one retry), and those dropped.
+    rejected: int = 0
+    dropped: int = 0
+    # Set when agent mode gave up and plain mode wrote the resume instead.
+    fallback: str | None = None
+
+
+
 class TailoredResumeOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -168,6 +191,7 @@ class TailoredResumeOut(BaseModel):
     content: ResumeContent
     match_analysis: MatchAnalysis
     markdown: str
+    agent_trace: AgentTrace | None = None
     created_at: datetime
 
 
@@ -219,3 +243,54 @@ class AtsReport(BaseModel):
 
     score: int
     checks: list[AtsCheck]
+
+
+# ---------- Agent data: fact sheet and memories ----------
+
+FactId = Annotated[str, StringConstraints(pattern=r"^[a-z0-9-]{1,40}$")]
+FactText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
+Term = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+
+
+class Fact(BaseModel):
+    """One verified fact. Every number and tool a bullet built from it may use
+    must be in `numbers` / `tools` or in the text itself."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: FactId
+    text: FactText
+    numbers: list[Term] = Field(default=[], max_length=30)
+    tools: list[Term] = Field(default=[], max_length=60)
+    context: Annotated[str, StringConstraints(max_length=500)] = ""
+
+
+class FactSheet(BaseModel):
+    facts: list[Fact] = Field(max_length=200)
+
+    @field_validator("facts")
+    @classmethod
+    def _unique_ids(cls, facts: list[Fact]) -> list[Fact]:
+        ids = [f.id for f in facts]
+        if len(ids) != len(set(ids)):
+            raise ValueError("fact ids must be unique")
+        return facts
+
+
+class FactsSaved(BaseModel):
+    saved: int
+    # False when Pinecone isn't configured or couldn't be reached; the facts are
+    # still saved, and agent mode falls back to plain mode until they're indexed.
+    indexed: bool
+
+
+class MemoryCreate(BaseModel):
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
+
+
+class MemoryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    text: str
+    created_at: datetime

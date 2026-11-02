@@ -2,11 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse, Response
 from sqlalchemy.orm import Session
 
-from app import idempotency, models, observability
+from app import agent, idempotency, models, observability
 from app.auth import CurrentUser
 from app.config import settings
 from app.database import get_db, get_owned
 from app.idempotency import IdempotencyKeyHeader
+from app.routers import agent_data
 from app.pagination import DEFAULT_LIMIT, Cursor, Limit, paginate
 from app.schemas import (
     AtsReport,
@@ -64,14 +65,32 @@ def tailor_for_application(
                 400, "No resume_id given and no default resume configured"
             )
 
+    def plain():
+        return tailoring.tailor_resume(
+            resume_content=resume.content,
+            job_description=application.job_description,
+            company=application.company,
+            role=application.role,
+        )
+
+    trace = None
     try:
-        with observability.llm_timer(settings.resolve_provider(), "tailor"):
-            result = tailoring.tailor_resume(
-                resume_content=resume.content,
-                job_description=application.job_description,
-                company=application.company,
-                role=application.role,
-            )
+        with observability.llm_timer(settings.resolve_provider(), "agent" if settings.tailor_mode == "agent" else "tailor"):
+            if settings.tailor_mode == "agent":
+                memories = db.query(models.AgentMemory).filter(models.AgentMemory.user_id == user).all()
+                result, trace = agent.tailor_or_fallback(
+                    user_id=user,
+                    facts=[agent_data.fact_out(f) for f in agent_data.user_facts(db, user)],
+                    memories=[m.text for m in memories],
+                    resume_content=resume.content,
+                    job_description=application.job_description,
+                    company=application.company,
+                    role=application.role,
+                    plain=plain,
+                    job_key=f"app-{application.id}",
+                )
+            else:
+                result = plain()
     except RuntimeError as exc:
         raise HTTPException(502, str(exc)) from exc
 
@@ -82,6 +101,7 @@ def tailor_for_application(
         content=result.tailored_resume.model_dump(),
         match_analysis=result.match_analysis.model_dump(),
         markdown=tailoring.render_markdown(result.tailored_resume),
+        agent_trace=trace.model_dump() if trace else None,
     )
     db.add(tailored)
     db.flush()

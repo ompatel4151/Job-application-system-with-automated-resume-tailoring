@@ -4,12 +4,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app import auth, ratelimit
+from app import auth, ratelimit, vectorstore
 from app.config import settings
 from app.database import Base, get_db
 from app.main import app
 from app.schemas import MatchAnalysis, ResumeContent
 from app.services.tailoring import TailoringResult
+from tests.fake_pinecone import BrokenIndex, FakeIndex
 from tests.tokens import SIGNING_KEY, SUPABASE_URL, USER_A, auth_header
 
 engine = create_engine(
@@ -27,6 +28,25 @@ def _test_auth(monkeypatch):
     monkeypatch.setattr(auth, "_signing_key", lambda token: SIGNING_KEY.public_key())
     # The test database is built below with create_all; don't migrate the dev DB.
     monkeypatch.setattr("app.main.migrate", lambda: None)
+
+
+@pytest.fixture(autouse=True)
+def _no_real_pinecone(monkeypatch):
+    """backend/.env may hold a real key; tests never reach Pinecone unless they
+    opt in with fake_index or broken_index."""
+    monkeypatch.setattr(vectorstore, "_index", lambda: None)
+
+
+@pytest.fixture()
+def fake_index(monkeypatch):
+    index = FakeIndex()
+    monkeypatch.setattr(vectorstore, "_index", lambda: index)
+    return index
+
+
+@pytest.fixture()
+def broken_index(monkeypatch):
+    monkeypatch.setattr(vectorstore, "_index", lambda: BrokenIndex())
 
 
 @pytest.fixture(autouse=True)

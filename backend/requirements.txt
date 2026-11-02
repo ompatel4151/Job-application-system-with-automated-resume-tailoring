@@ -14,6 +14,7 @@ PyJWT[crypto]>=2.9
 redis>=5.0
 prometheus-client>=0.20
 psycopg2-binary>=2.9
+pinecone>=10.2,<11
 
 # dev / test
 pytest>=8.0

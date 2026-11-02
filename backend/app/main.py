@@ -15,7 +15,7 @@ from starlette.routing import Match
 from app import auth, observability, ratelimit
 from app.config import settings
 from app.database import migrate
-from app.routers import applications, resumes, tailoring
+from app.routers import agent_data, applications, resumes, tailoring
 
 observability.configure_logging()
 logger = logging.getLogger(__name__)
@@ -183,6 +183,7 @@ async def unhandled_error(request: Request, exc: Exception):
 app.include_router(resumes.router)
 app.include_router(applications.router)
 app.include_router(tailoring.router)
+app.include_router(agent_data.router)
 
 @app.get("/health", tags=["meta"])
 def health():
@@ -202,7 +203,7 @@ def metrics(request: Request):
 _ROUTES = [
     route
     for routes in (app.router.routes, resumes.router.routes, applications.router.routes,
-                   tailoring.router.routes)
+                   tailoring.router.routes, agent_data.router.routes)
     for route in routes
     if hasattr(route, "path")
 ]

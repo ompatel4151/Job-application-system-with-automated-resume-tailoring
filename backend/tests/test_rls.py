@@ -127,3 +127,26 @@ def test_the_api_on_postgres_keeps_users_apart(pg):
             assert c.delete(f"/api/applications/{new_id}", headers=as_b).status_code == 404
     finally:
         app.dependency_overrides.clear()
+
+
+def test_facts_and_memories_are_private_without_a_filter(pg):
+    with pg.begin() as conn:  # as the owner: one fact and one memory per user
+        for user, tag in ((USER_A, "a"), (USER_B, "b")):
+            conn.execute(
+                text(
+                    "INSERT INTO resume_facts (user_id, fact_id, text, numbers, tools, context, created_at) "
+                    "VALUES (:u, :t, :t, '[]', '[]', '', now())"
+                ),
+                {"u": user, "t": f"fact-{tag}"},
+            )
+            conn.execute(
+                text("INSERT INTO agent_memories (user_id, text, created_at) VALUES (:u, :t, now())"),
+                {"u": user, "t": f"memory-{tag}"},
+            )
+
+    with pg.begin() as conn:
+        _as(conn, USER_A)
+        assert conn.execute(text("SELECT fact_id FROM resume_facts")).scalars().all() == ["fact-a"]
+        assert conn.execute(text("SELECT text FROM agent_memories")).scalars().all() == ["memory-a"]
+        assert conn.execute(text("DELETE FROM agent_memories WHERE text = 'memory-b'")).rowcount == 0
+        assert conn.execute(text("UPDATE resume_facts SET text = 'x' WHERE fact_id = 'fact-b'")).rowcount == 0
