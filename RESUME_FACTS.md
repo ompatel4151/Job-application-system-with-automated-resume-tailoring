@@ -182,7 +182,7 @@ users. Full table and caveats: AGENT_EXPERIMENT.md, section 10.
 | Fact | Where | How |
 |---|---|---|
 | 90 tailorings (30 synthetic JDs × 3 runs): 90 succeeded; 1 needed a re-run after a Groq `json_validate_failed`. | my Mac, free-tier Groq, `openai/gpt-oss-120b`, 2026-10-26 to 2026-10-27 | `eval/run_eval.py --mode plain --version v0 --run 1/2/3` |
-| Invented-fact rate (bullets the checker or the judge found unsupported by my fact sheet): median 32.7% across 3 runs (range 29.0% to 35.2%). Checker alone: 2.0%; judge alone: 32.5%. **Not yet validated against my hand labels**, so not a headline number yet. | same, judge `qwen/qwen3.8-27b` | `eval/score.py --mode plain --version v0` |
+| Invented-fact rate (bullets the checker or the judge found unsupported by my fact sheet): median 32.7% across 3 runs (range 29.0% to 35.2%). Checker alone: 2.0%; judge alone: 32.5%. **Failed validation against my hand labels (below)**, so not a headline number. | same, judge `qwen/qwen3.8-27b` | `eval/score.py --mode plain --version v0` |
 | Mean ATS score: 79.9 over 90 tailorings, against frozen per-JD keywords. | same | same |
 | Latency: pooled p50 5.78 s, p95 9.45 s (90 tailorings, network to Groq included). | same | same, after amendment A3 |
 | Cost: 1 LLM call and about 4,878 tokens per tailoring, about $0.0018 at list price (the free tier billed $0). | same | token counts from the API, prices from `eval/prices.json` |

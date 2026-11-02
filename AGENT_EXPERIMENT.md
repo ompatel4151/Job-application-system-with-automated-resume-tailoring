@@ -526,5 +526,37 @@ numbers above, not new rules):
     those two checker findings, none of the judge's verdicts.
   - The first submission is kept privately as
     `private/labels/plain-v0.first-submission.csv`.
+  - A second submission (2026-11-02) was byte-for-byte identical: all
+    "supported", with the same agreement figures. It isn't used for rule 6
+    either, for the same reason. The sheet was blanked again for a third
+    pass in the one-at-a-time labeler.
+
+### Rule 6 on the baseline: fails (2026-11-02)
+
+- **The labels:** the third pass, labeled one bullet at a time in
+  `label_sheet.py label` and finished 2026-11-02. That's 79 bullets (a random
+  20% of run 1). The user marked **14 unsupported (17.7%)** and 65 supported.
+- One labeler, the candidate, who is also the person the bullets describe.
+- Command: `label_sheet.py agree --mode plain --version v0`.
+
+| | Agreement | Both say unsupported | Only the tool flags | Only the user flags | Both say supported |
+|---|---|---|---|---|---|
+| Checker | 68/79 = 86.1% | 3 | 0 | 11 | 65 |
+| Judge | 57/79 = 72.2% | 10 | 18 | 4 | 47 |
+| **Union** | **58/79 = 73.4%** | 11 | 18 | 3 | 47 |
+
+- **Rule 6 needs at least 85% on the union, so it fails.** Under section 6,
+  the agent can't become the default whatever Steps 2 and 3 show. Plain mode
+  stays the default.
+- **How the two automatic checks behaved on this sample:**
+  - The checker never flagged something the user called supported, but it
+    caught only 3 of the user's 14.
+  - The judge flagged 18 bullets the user called supported, and missed 4.
+  - The union flags 29 of 79 (36.7%) against the user's 14 (17.7%). Read
+    against these labels, the 32.7% headline overstates the invented-fact
+    rate by about 2 times.
+- **What this doesn't show:** whether the judge or the labeler is right on
+  the 18. These are one person's labels on 79 bullets from one run.
+  - The rule was fixed before the data, so the failure stands as recorded.
 - **Run 3's latency p95 (20.56 s) is driven by its slowest few calls.**
   That's 3 runs of 30 on a shared free tier.
