@@ -364,9 +364,12 @@ def _bad_request(message):
     return openai.BadRequestError(message, response=httpx.Response(400, request=request), body=None)
 
 
-def test_a_turn_rejected_for_a_misnamed_tool_is_retried_not_fatal():
-    """Seen live (v1, swe-02): the model called "repo_draft_bullets" and Groq
-    refused the turn with tool_use_failed, which made the whole run fall back."""
+@pytest.mark.parametrize("error", [
+    "tool_use_failed: attempted to call tool 'repo_draft_bullets'",  # seen live, v1 swe-02
+    "output_parse_failed: The model generated output that could not be parsed",  # seen live, v2 swe-01
+])
+def test_a_turn_the_provider_refuses_is_retried_not_fatal(error):
+    """Groq refused the model's own output, which made the whole run fall back."""
 
     class Misnames(ScriptedLLM):
         def chat(self, messages, tools):
@@ -374,7 +377,7 @@ def test_a_turn_rejected_for_a_misnamed_tool_is_retried_not_fatal():
                 self.failed = True
                 self.calls += 1
                 self.seen.append(list(messages))
-                raise _bad_request("tool_use_failed: attempted to call tool 'repo_draft_bullets'")
+                raise _bad_request(error)
             return super().chat(messages, tools)
 
     llm = Misnames([call("draft_bullets", section="summary", fact_ids=["jt-redis"])],
@@ -385,7 +388,7 @@ def test_a_turn_rejected_for_a_misnamed_tool_is_retried_not_fatal():
     assert trace.model_errors == 1
     assert trace.steps == 3  # the failed turn counts toward the cap
     told = llm.seen[1][-1]
-    assert told["role"] == "user" and "repo_draft_bullets" in told["content"] and "draft_bullets" in told["content"]
+    assert told["role"] == "user" and error[:20] in told["content"] and "draft_bullets" in told["content"]
 
 
 def test_other_model_errors_still_end_the_run():

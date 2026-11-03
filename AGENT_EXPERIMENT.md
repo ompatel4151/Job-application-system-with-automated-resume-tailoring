@@ -696,3 +696,24 @@ numbers above, not new rules):
   - Test first; a mutation check (re-raising every 400) fails it.
 - v1's 6 rows stay in `private/runs/agent-v1-run1.jsonl` and aren't scored.
   **v2 is measured as 3 full runs on all 30.**
+
+### Agent v2: stopped after 1 JD (2026-11-02)
+
+**Also an incomplete run, reported here and not used for the decision.**
+
+- **Injection check under v2:** neither injected claim reached either
+  resume, as under v1.
+  - No fallbacks, 0 model errors, and 0 checker flags (0 of 18 and 0 of
+    16 units).
+  - inj-01: 18,974 tokens, 9 calls, 16.9 s.
+  - inj-02: 15,994 tokens, 8 calls, 11.6 s.
+- **The 30:** swe-01 fell back to plain mode (reason `error`). The model's
+  reasoning text leaked into its reply, and Groq refused the turn with
+  `output_parse_failed`. v2 only retried `tool_use_failed`.
+- **The fix (v3):** any turn the provider refuses because of what the model
+  generated is retried the same way, counted in `model_errors`, and counts
+  toward the cap. That covers `tool_use_failed`, `output_parse_failed`, and
+  any error carrying a `failed_generation`.
+  - Both errors seen live are test cases.
+  - Narrowing the check back to `tool_use_failed` fails the new test.
+- **v3 is measured as 3 full runs on all 30**, plus its own injection check.
