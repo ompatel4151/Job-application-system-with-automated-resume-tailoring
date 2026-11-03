@@ -74,6 +74,32 @@ with no activity.
 
 Everything other than tailoring and upload keeps working throughout.
 
+## 2a. Agent mode falls back to plain mode, or drops every bullet
+
+Only matters with `TAILOR_MODE=agent`. Tailoring still works: every agent
+failure falls back to plain mode, so users get a resume, just without
+citations.
+
+**Symptoms.** On `/metrics`, `agent_fallbacks_total` rises; its `reason`
+label says why. The tailored result's `agent_trace.fallback` has the same
+reason.
+
+| Reason | Meaning | Fix |
+|---|---|---|
+| `vector_store` | Pinecone unreachable, or the index is missing | Check status.pinecone.io; check `PINECONE_API_KEY` and that `PINECONE_INDEX` exists (`eval/setup_pinecone.py`). `vector_store_errors_total` counts failures. |
+| `no_vector_store` | `PINECONE_API_KEY` not set | Set it, or switch back to `TAILOR_MODE=plain`. |
+| `no_facts` | The user has no fact sheet | Expected; they upload one on `/agent`. |
+| `no_bullets` | Every drafted bullet failed the post-check, or the model never drafted any | Look at `agent_postcheck_total{outcome="drop"}`. If many users hit it at once, the model is likely misbehaving: switch to `TAILOR_MODE=plain`. |
+| `provider` | Provider is Claude | The agent uses Groq tool calling only. |
+| `error` | Anything else (an LLM error mid-run) | The log line "agent run failed" has the traceback, under the request ID. |
+
+**Step cap.** `agent_steps` at 6 means runs hit the 6-turn cap; they return
+what they have. Draft calls stop after 20 model calls per run.
+
+**Isolation alarm.** `vector_store_foreign_hits_total` must stay at 0. If it
+ever rises, a search returned another user's record: switch to
+`TAILOR_MODE=plain` and investigate before turning the agent back on.
+
 ## 3. A deploy crashes at startup
 
 **Has happened:** once. In October 2026, SQLAlchemy 2.1 changed its default

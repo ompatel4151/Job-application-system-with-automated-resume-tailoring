@@ -171,6 +171,32 @@ JSON validated against the schema. Claude reads PDFs and images natively, so it
 is the better choice for scanned resumes, since Groq cannot read a PDF that has
 no text layer.
 
+### Agent mode (experimental, off by default)
+
+`TAILOR_MODE=agent` tailors with a grounded agent instead of the single call:
+a tool-calling loop of at most 6 turns that searches your fact sheet,
+checks the posting for blockers (sponsorship, citizenship, clearance,
+required skills you don't have), and drafts bullets that cite fact ids. A
+deterministic post-check rejects any bullet that uses a number or tool its
+cited facts don't contain; it gets one rewrite, then it's dropped.
+
+| Env var | Notes |
+|---|---|
+| `TAILOR_MODE` | `plain` (default) or `agent` |
+| `PINECONE_API_KEY` | Free Starter plan; one namespace per user |
+| `PINECONE_INDEX` | Default `job-tracker-facts`; create it with `eval/setup_pinecone.py` |
+
+Any failure falls back to plain mode, recorded in the result's `agent_trace`
+and counted on `/metrics`. Limits, stated plainly:
+- Pinecone has no row-level security: the app enforces isolation (namespace
+  from the verified token only, and a `user_id` check on every hit).
+- Starter allows 100 namespaces per index, so at most 100 users.
+- The agent uses Groq's tool calling; with Claude it falls back to plain mode.
+- One request can make up to about 22 model calls, against 1 in plain mode.
+
+Whether it should be the default is decided by a pre-registered experiment:
+[AGENT_EXPERIMENT.md](AGENT_EXPERIMENT.md).
+
 ### Typical workflow
 
 1. Add your base resume (structured JSON) and mark it default.
@@ -233,6 +259,10 @@ every pull request.
 | `GET` | `/api/tailored/{id}/markdown` | Download as Markdown |
 | `GET` | `/api/tailored/{id}/pdf` | Download as PDF |
 | `GET` | `/api/tailored/{id}/ats` | Rule-based ATS check (score, and the reason for every point lost) |
+| `GET/POST` | `/api/facts` | List / replace the fact sheet the agent cites |
+| `DELETE` | `/api/facts/{fact_id}` | Delete one fact |
+| `GET/POST` | `/api/memories` | List / add a preference for the agent |
+| `DELETE` | `/api/memories/{id}` | Delete a memory |
 
 ## Reliability and safety
 

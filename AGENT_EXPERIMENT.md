@@ -430,6 +430,80 @@ later.
     signature I can prove, so it stays as a genuine slow sample. No row in
     runs 1 or 2 is over 20 s.
 
+## Step 2: as built (2026-11-02), and where it differs from the plan
+
+Built test-first on `experiment/grounded-agent`, before any agent run on a
+real model. Agent mode is off unless `TAILOR_MODE=agent`.
+
+- **Tests:**
+  - Backend: 248 pass and 2 are skipped. The skips are 1 SQLite-only test
+    and the opt-in live Pinecone test. Line coverage is 93%.
+  - Frontend: 20 Vitest tests.
+  - Command: `pytest` with Postgres 16 and Redis 7 in Docker, `npm test`.
+  - Section 5's tests are in `tests/test_agent.py`, `tests/test_agent_api.py`,
+    `tests/test_facts.py`, `tests/test_postcheck.py`, `tests/test_rls.py` and
+    `tests/test_pinecone_live.py`.
+- **Mutation checks (test 8):** each safeguard was broken on purpose, the
+  tests run, then the file restored from a copy and confirmed byte-identical.
+
+  | Broken on purpose | Tests failed |
+  |---|---|
+  | One shared Pinecone namespace | 4 |
+  | Hits owned by another user kept | 1 |
+  | Post-check passes everything | 8 |
+  | No step cap | 2 |
+  | Fact-id ownership check off | 2 |
+  | Tool arguments may carry extra fields such as `namespace` | 2 |
+
+  - The first try at "hits owned by another user kept" broke no test. The
+    agent's own fact list filtered the planted hit first, so a store-level
+    test was added.
+
+**Differences from the plan, each decided before measuring:**
+
+1. **Pinecone API:** `create_index_for_model` with integrated
+   `llama-text-embed-v2`, through the Records API (`upsert_records`,
+   `search`), on SDK 10.2.0. The plan left this choice open. One index,
+   `job-tracker-facts`, created by `eval/setup_pinecone.py`.
+2. **How the resume is put together:**
+   - Sections the agent drafted get its post-checked bullets.
+   - Every other section keeps the base resume's bullets, which calibration
+     found to be 0 unsupported.
+   - Skills, education and headings are unchanged.
+   - So the only new text in an agent resume is text that passed the
+     post-check.
+3. **Every drafted bullet must cite at least one fact it was given.** A goal
+   line with no fact behind it ("seeking to apply...") gets dropped, not
+   kept.
+4. **`check_requirements` also returns the match analysis** (score,
+   keywords, ATS keywords) that the output contract needs. Required skills
+   come from the model but are checked against the sheet in code. Rule
+   blockers match on the whole posting, because sentence splitting broke on
+   "U.S.".
+5. **Cost cap:** draft and requirements calls refuse after 20 model calls in
+   a run.
+   - One turn can contain many tool calls, so the 6-turn cap alone didn't
+     bound cost.
+   - The worst case is therefore about 22 model calls per request (the 20,
+     plus the final turn and the requirements call), not the plan's estimate
+     of about 7. Section 3.4's amplification figure is updated to this; actual counts
+     are measured in Step 3.
+6. **The Claude provider falls back to plain mode** (reason `provider`). The
+   tool loop is OpenAI-format only, which covers Groq, the live default.
+7. **A model output Groq rejects** (`json_validate_failed`) inside a tool is
+   a tool error the model can retry, not a failed run.
+8. **UI:** facts and memories share one page, `/agent`. Fact sheets upload
+   as JSON only; YAML would need a new frontend dependency.
+9. **The live Pinecone test is opt-in** (`PINECONE_LIVE_TEST=1`), so routine
+   test runs never spend quota or need the network.
+10. **Eval harness:**
+    - Each agent run gets its own namespace per version and run, so
+      `find_similar_jobs` only sees that run's earlier JDs. That's an
+      order effect, stated here.
+    - Per-minute 429s inside an agent run are waited out and taken out of
+      the latency (section 7d), instead of causing a fallback. Fallbacks
+      are counted.
+
 ## 10. Results
 
 ### Calibration (before Step 1), 2026-10-25
