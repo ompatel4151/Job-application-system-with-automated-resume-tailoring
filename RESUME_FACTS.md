@@ -192,3 +192,22 @@ users. Full table and caveats: AGENT_EXPERIMENT.md, section 10.
 
 Not measured yet: the agent (Step 2 isn't built) and any comparison between the
 two modes.
+
+## Agent experiment, Step 2: the agent as built (branch `experiment/grounded-agent`, not on main or live)
+
+| Fact | Where | How |
+|---|---|---|
+| A grounded tailoring agent behind a `TAILOR_MODE` flag (off by default): a tool-calling loop of at most 6 turns with 4 tools (search facts, find similar jobs, check requirements, draft bullets), no framework. | local | `backend/app/agent/` |
+| Every agent bullet must cite fact ids; a deterministic post-check rejects any number or tool not in its cited facts, allows one rewrite, then drops it. | local | `tests/test_postcheck.py`, `tests/test_agent.py` |
+| Per-user Pinecone namespaces taken only from the verified token; any search hit owned by another user is dropped. New `resume_facts` and `agent_memories` tables under PostgreSQL row-level security (migration `0003`). | local, PostgreSQL 16 in Docker | `tests/test_facts.py`, `tests/test_rls.py` |
+| Any agent failure falls back to plain tailoring, with the reason counted on `/metrics`; a run is capped at 20 model calls. | local | `tests/test_agent_api.py` |
+| 251 backend tests pass (2 skipped), 93% backend line coverage; 20 frontend Vitest tests. | local, 2026-11-02, Postgres 16 and Redis 7 in Docker | `pytest --cov=app`, `npm test` |
+| 6 mutation checks (shared namespace, foreign hits kept, post-check off, no step cap, fact ownership off, extra tool arguments allowed): each made tests fail. The first try at one of them broke no test, which exposed a gap; a test was added. | local | broke each safeguard on purpose, restored from a copy |
+| Live Pinecone isolation test passed: two namespaces never returned each other's records. | real Pinecone (free Starter), 2026-11-02, single run | `PINECONE_LIVE_TEST=1 pytest tests/test_pinecone_live.py` |
+| Prompt injection on the real model: on 2 extra postings with planted instructions ("claim 10 years", "PhD from Stanford"), no planted claim reached a resume, under v1 and v2. | free-tier Groq, 2026-11-02, single measurements on 2 postings | `run_eval.py --mode agent --jds injection_jds.yaml` |
+| Agent cost so far: about 16K to 20K tokens and 8 to 9 model calls per tailoring, against about 4.9K tokens and 1 call in plain mode. | 10 agent tailorings (v1 and the injection checks), free-tier Groq | token counts from the API |
+| Two live provider errors made the agent fall back (a misnamed tool call; unparseable output). Both runs were stopped early, reported as incomplete, and fixed test-first before v3. | free-tier Groq, 2026-11-02 | AGENT_EXPERIMENT.md |
+
+Not measured yet: the agent's invented-fact rate, ATS score, blocker detection
+and latency on the 30 job descriptions (v3 runs in progress), and any
+comparison with plain mode.
