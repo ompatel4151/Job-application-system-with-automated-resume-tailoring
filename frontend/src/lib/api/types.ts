@@ -17,6 +17,11 @@ export type PipelineStats = components["schemas"]["PipelineStats"];
 
 export type AtsReport = components["schemas"]["AtsReport"];
 
+export type Fact = components["schemas"]["Fact"];
+export type FactsSaved = components["schemas"]["FactsSaved"];
+export type MemoryOut = components["schemas"]["MemoryOut"];
+export type AgentTrace = components["schemas"]["AgentTrace"];
+
 export type ApplicationPage = components["schemas"]["ApplicationPage"];
 export type ResumePage = components["schemas"]["ResumePage"];
 export type TailoredResumePage = components["schemas"]["TailoredResumePage"];

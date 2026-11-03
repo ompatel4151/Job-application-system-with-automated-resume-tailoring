@@ -11,6 +11,9 @@ import type {
   ApplicationStatus,
   ApplicationUpdate,
   AtsReport,
+  Fact,
+  FactsSaved,
+  MemoryOut,
   PipelineStats,
   ResumeCreate,
   ResumeOut,
@@ -122,4 +125,15 @@ export const api = {
     http<TailoredResumePage>(
       listPath(`/applications/${applicationId}/tailored`, { cursor }),
     ),
+
+  // Agent data: the fact sheet (replaced whole) and the agent's memories.
+  listFacts: () => http<Fact[]>(`/facts`),
+  replaceFacts: (facts: Fact[]) =>
+    http<FactsSaved>(`/facts`, { method: "POST", body: JSON.stringify({ facts }) }),
+  deleteFact: (id: string) =>
+    http<void>(`/facts/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  listMemories: () => http<MemoryOut[]>(`/memories`),
+  createMemory: (text: string) =>
+    http<MemoryOut>(`/memories`, { method: "POST", body: JSON.stringify({ text }) }),
+  deleteMemory: (id: number) => http<void>(`/memories/${id}`, { method: "DELETE" }),
 };

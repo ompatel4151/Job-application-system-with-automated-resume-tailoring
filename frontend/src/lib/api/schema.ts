@@ -234,6 +234,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/facts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Facts */
+        get: operations["list_facts_api_facts_get"];
+        put?: never;
+        /**
+         * Replace Facts
+         * @description Replaces the caller's whole sheet. Postgres is the source of truth;
+         *     Pinecone indexing is best effort and reported as `indexed`.
+         */
+        post: operations["replace_facts_api_facts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/facts/{fact_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Fact */
+        delete: operations["delete_fact_api_facts__fact_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/memories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Memories */
+        get: operations["list_memories_api_memories_get"];
+        put?: never;
+        /** Create Memory */
+        post: operations["create_memory_api_memories_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/memories/{memory_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Memory */
+        delete: operations["delete_memory_api_memories__memory_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -255,6 +329,49 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AgentTrace
+         * @description What agent mode did (AGENT_EXPERIMENT.md 3.3). Plain mode has none.
+         */
+        AgentTrace: {
+            /**
+             * Blockers
+             * @default []
+             */
+            blockers: string[];
+            /**
+             * Citations
+             * @default []
+             */
+            citations: components["schemas"]["Citation"][];
+            /**
+             * Steps
+             * @default 0
+             */
+            steps: number;
+            /**
+             * Tool Calls
+             * @default 0
+             */
+            tool_calls: number;
+            /**
+             * Llm Calls
+             * @default 0
+             */
+            llm_calls: number;
+            /**
+             * Rejected
+             * @default 0
+             */
+            rejected: number;
+            /**
+             * Dropped
+             * @default 0
+             */
+            dropped: number;
+            /** Fallback */
+            fallback?: string | null;
+        };
         /** ApplicationCreate */
         ApplicationCreate: {
             /** Company */
@@ -369,6 +486,13 @@ export interface components {
             /** File */
             file: string;
         };
+        /** Citation */
+        Citation: {
+            /** Text */
+            text: string;
+            /** Fact Ids */
+            fact_ids: string[];
+        };
         /** EducationEntry */
         EducationEntry: {
             /** School */
@@ -406,6 +530,44 @@ export interface components {
              */
             bullets: string[];
         };
+        /**
+         * Fact
+         * @description One verified fact. Every number and tool a bullet built from it may use
+         *     must be in `numbers` / `tools` or in the text itself.
+         */
+        Fact: {
+            /** Id */
+            id: string;
+            /** Text */
+            text: string;
+            /**
+             * Numbers
+             * @default []
+             */
+            numbers: string[];
+            /**
+             * Tools
+             * @default []
+             */
+            tools: string[];
+            /**
+             * Context
+             * @default
+             */
+            context: string;
+        };
+        /** FactSheet */
+        FactSheet: {
+            /** Facts */
+            facts: components["schemas"]["Fact"][];
+        };
+        /** FactsSaved */
+        FactsSaved: {
+            /** Saved */
+            saved: number;
+            /** Indexed */
+            indexed: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -439,6 +601,23 @@ export interface components {
              * @default []
              */
             ats_keywords: string[];
+        };
+        /** MemoryCreate */
+        MemoryCreate: {
+            /** Text */
+            text: string;
+        };
+        /** MemoryOut */
+        MemoryOut: {
+            /** Id */
+            id: number;
+            /** Text */
+            text: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** PipelineStats */
         PipelineStats: {
@@ -570,6 +749,7 @@ export interface components {
             match_analysis: components["schemas"]["MatchAnalysis"];
             /** Markdown */
             markdown: string;
+            agent_trace?: components["schemas"]["AgentTrace"] | null;
             /**
              * Created At
              * Format: date-time
@@ -1164,6 +1344,170 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AtsReport"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_facts_api_facts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fact"][];
+                };
+            };
+        };
+    };
+    replace_facts_api_facts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FactSheet"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FactsSaved"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_fact_api_facts__fact_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_memories_api_memories_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemoryOut"][];
+                };
+            };
+        };
+    };
+    create_memory_api_memories_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemoryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemoryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_memory_api_memories__memory_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memory_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

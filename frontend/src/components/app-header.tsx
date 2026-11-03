@@ -21,6 +21,9 @@ export function AppHeader() {
             <Link href="/resumes" className="hover:text-foreground">
               Base resume
             </Link>
+            <Link href="/agent" className="ml-4 hover:text-foreground">
+              Facts &amp; memories
+            </Link>
           </nav>
         )}
         {stats ? (

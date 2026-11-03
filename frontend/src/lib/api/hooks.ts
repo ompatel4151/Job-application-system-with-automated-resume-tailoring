@@ -13,6 +13,7 @@ import { api } from "./client";
 import { flattenPages, nextPageParam } from "./pages";
 import type {
   ApplicationCreate,
+  Fact,
   ApplicationUpdate,
   ResumeCreate,
 } from "./types";
@@ -24,6 +25,8 @@ export const keys = {
   resumes: ["resumes"] as const,
   tailored: (id: number) => ["tailored", id] as const,
   ats: (tailoredId: number) => ["ats", tailoredId] as const,
+  facts: ["facts"] as const,
+  memories: ["memories"] as const,
 };
 
 // List hooks load pages on demand; `items` is every loaded page as one list.
@@ -151,5 +154,45 @@ export function useTailor() {
       invalidate();
       qc.invalidateQueries({ queryKey: keys.tailored(tailored.application_id) });
     },
+  });
+}
+
+export function useFacts() {
+  return useQuery({ queryKey: keys.facts, queryFn: api.listFacts });
+}
+
+export function useReplaceFacts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (facts: Fact[]) => api.replaceFacts(facts),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.facts }),
+  });
+}
+
+export function useDeleteFact() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteFact(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.facts }),
+  });
+}
+
+export function useMemories() {
+  return useQuery({ queryKey: keys.memories, queryFn: api.listMemories });
+}
+
+export function useCreateMemory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (text: string) => api.createMemory(text),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.memories }),
+  });
+}
+
+export function useDeleteMemory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteMemory(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.memories }),
   });
 }

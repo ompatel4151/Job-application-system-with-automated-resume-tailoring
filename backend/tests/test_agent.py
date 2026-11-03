@@ -339,3 +339,18 @@ def test_a_rejected_model_output_is_a_tool_error_and_the_run_goes_on():
     result, _ = run(llm)
 
     assert result.tailored_resume.summary == "Built a Redis Lua token bucket."
+
+
+def test_tools_that_call_the_model_stop_at_the_run_budget():
+    """One turn can hold many tool calls, so the step cap alone doesn't bound
+    cost; LLM-calling tools refuse once the run has made MAX_LLM_CALLS calls."""
+    from app.agent.tools import MAX_LLM_CALLS
+
+    many = Reply(content="", tool_calls=[
+        Call(id=f"d{i}", name="draft_bullets", arguments=json.dumps({"section": "summary", "fact_ids": ["jt-redis"]}))
+        for i in range(40)])
+    llm = ScriptedLLM([many], drafts=[draft(("Built a Redis Lua token bucket.", ["jt-redis"]))] * 40)
+    _, trace = run(llm)
+
+    assert llm.calls <= MAX_LLM_CALLS + 2  # + the final turn and the requirements call
+    assert any("budget" in r.get("error", "") for r in tool_results(llm).values())

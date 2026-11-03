@@ -12,7 +12,7 @@ import {
   useTailor,
   useUpdateApplication,
 } from "@/lib/api/hooks";
-import type { TailoredResumeOut } from "@/lib/api/types";
+import type { AgentTrace, TailoredResumeOut } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -148,6 +148,8 @@ function TailorResult({ result }: { result: TailoredResumeOut }) {
           </a>
         </div>
       </div>
+
+      {result.agent_trace ? <AgentPanel trace={result.agent_trace} /> : null}
 
       <AtsPanel tailoredId={result.id} />
 
@@ -287,6 +289,39 @@ function AtsPanel({ tailoredId }: { tailoredId: number }) {
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+// Agent mode only: blockers first, since they can decide whether to apply at all.
+function AgentPanel({ trace }: { trace: AgentTrace }) {
+  const blockers = trace.blockers ?? [];
+  if (trace.fallback) {
+    return (
+      <p className="rounded-lg border p-3 text-sm text-muted-foreground">
+        Agent mode wasn&apos;t available ({trace.fallback.replaceAll("_", " ")}), so
+        this resume was tailored in plain mode, without fact citations.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-3 rounded-xl border p-4">
+      {blockers.length > 0 ? (
+        <div role="alert" className="rounded-lg border border-rose-500/40 bg-rose-500/5 p-3">
+          <h3 className="text-sm font-medium">Possible blockers</h3>
+          <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
+            {blockers.map((b) => (
+              <li key={b}>{b}</li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">No blockers found in this posting.</p>
+      )}
+      <p className="text-xs text-muted-foreground">
+        {(trace.citations ?? []).length} new bullets, each citing your fact sheet ·{" "}
+        {trace.dropped ?? 0} dropped by the fact check · {trace.steps ?? 0} agent steps
+      </p>
     </div>
   );
 }

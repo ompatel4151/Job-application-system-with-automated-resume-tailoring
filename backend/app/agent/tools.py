@@ -20,6 +20,8 @@ from app.agent import postcheck
 from app.schemas import Citation, ResumeContent
 
 MAX_PER_SECTION = 6
+# Per run. A turn can hold many tool calls, so the 6-turn cap alone doesn't bound cost.
+MAX_LLM_CALLS = 20
 
 
 class Fallback(Exception):
@@ -250,6 +252,9 @@ def dispatch(run: Run, name: str, arguments: str) -> str:
         observability.AGENT_TOOL_CALLS.labels("unknown", "error").inc()
         return json.dumps({"error": f"no tool named {name!r}"})
     model, fn, _ = TOOLS[name]
+    if name in ("draft_bullets", "check_requirements") and run.llm.calls >= MAX_LLM_CALLS:
+        observability.AGENT_TOOL_CALLS.labels(name, "error").inc()
+        return json.dumps({"error": f"this run's budget of {MAX_LLM_CALLS} model calls is spent; finish now"})
     try:
         result = fn(run, model.model_validate_json(arguments or "{}"))
     except (ValidationError, ToolError) as exc:
