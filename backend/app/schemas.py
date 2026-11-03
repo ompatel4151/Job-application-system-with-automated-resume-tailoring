@@ -177,6 +177,8 @@ class AgentTrace(BaseModel):
     # Bullets the post-check rejected (each gets one retry), and those dropped.
     rejected: int = 0
     dropped: int = 0
+    # Turns the provider refused, e.g. a call to a tool that doesn't exist.
+    model_errors: int = 0
     # Set when agent mode gave up and plain mode wrote the resume instead.
     fallback: str | None = None
 

@@ -354,3 +354,44 @@ def test_tools_that_call_the_model_stop_at_the_run_budget():
 
     assert llm.calls <= MAX_LLM_CALLS + 2  # + the final turn and the requirements call
     assert any("budget" in r.get("error", "") for r in tool_results(llm).values())
+
+
+def _bad_request(message):
+    import httpx
+    import openai
+
+    request = httpx.Request("POST", "https://api.groq.com")
+    return openai.BadRequestError(message, response=httpx.Response(400, request=request), body=None)
+
+
+def test_a_turn_rejected_for_a_misnamed_tool_is_retried_not_fatal():
+    """Seen live (v1, swe-02): the model called "repo_draft_bullets" and Groq
+    refused the turn with tool_use_failed, which made the whole run fall back."""
+
+    class Misnames(ScriptedLLM):
+        def chat(self, messages, tools):
+            if not getattr(self, "failed", False):
+                self.failed = True
+                self.calls += 1
+                self.seen.append(list(messages))
+                raise _bad_request("tool_use_failed: attempted to call tool 'repo_draft_bullets'")
+            return super().chat(messages, tools)
+
+    llm = Misnames([call("draft_bullets", section="summary", fact_ids=["jt-redis"])],
+                   drafts=[draft(("Built a Redis Lua token bucket.", ["jt-redis"]))])
+    result, trace = run(llm)
+
+    assert result.tailored_resume.summary == "Built a Redis Lua token bucket."
+    assert trace.model_errors == 1
+    assert trace.steps == 3  # the failed turn counts toward the cap
+    told = llm.seen[1][-1]
+    assert told["role"] == "user" and "repo_draft_bullets" in told["content"] and "draft_bullets" in told["content"]
+
+
+def test_other_model_errors_still_end_the_run():
+    class Broken(ScriptedLLM):
+        def chat(self, messages, tools):
+            raise _bad_request("context_length_exceeded")
+
+    with pytest.raises(Exception, match="context_length_exceeded"):
+        run(Broken([]))

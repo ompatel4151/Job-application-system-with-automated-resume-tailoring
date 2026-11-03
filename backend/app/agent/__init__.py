@@ -10,8 +10,10 @@ the only new text in the result is post-checked text.
 import logging
 import uuid
 
+import openai
+
 from app import observability, vectorstore
-from app.agent.tools import SCHEMAS, Fallback, NoArgs, Run, check_requirements, dispatch
+from app.agent.tools import SCHEMAS, TOOLS, Fallback, NoArgs, Run, check_requirements, dispatch
 from app.schemas import AgentTrace, MatchAnalysis, ResumeContent
 from app.services.tailoring import TailoringResult
 
@@ -20,6 +22,7 @@ __all__ = ["Fallback", "run_agent", "tailor_or_fallback"]
 log = logging.getLogger(__name__)
 
 MAX_STEPS = 6
+TOOL_NAMES = list(TOOLS)
 
 SYSTEM = """You tailor a candidate's resume to one job, using only their verified facts.
 Work in a few steps:
@@ -51,9 +54,22 @@ def run_agent(*, user_id: uuid.UUID, facts, memories: list[str], resume_content,
             + f"\n<job_description>\n{job_description}\n</job_description>"
         )},
     ]
-    steps = 0
+    steps = model_errors = 0
     for steps in range(1, MAX_STEPS + 1):
-        reply = llm.chat(messages, SCHEMAS)
+        try:
+            reply = llm.chat(messages, SCHEMAS)
+        except openai.BadRequestError as exc:
+            # Groq refuses a turn whose tool call names no real tool. Say so and
+            # let the model try again; the turn still counts toward the cap.
+            if "tool_use_failed" not in str(exc):
+                raise
+            model_errors += 1
+            observability.AGENT_TOOL_CALLS.labels("unknown", "error").inc()
+            messages.append({"role": "user", "content": (
+                f"Your last tool call was rejected: {str(exc)[:300]}. "
+                f"The only tools are: {', '.join(TOOL_NAMES)}."
+            )})
+            continue
         messages.append(reply.as_message())
         if not reply.tool_calls:
             break
@@ -78,7 +94,7 @@ def run_agent(*, user_id: uuid.UUID, facts, memories: list[str], resume_content,
         blockers=requirements["blockers"],
         citations=[c for bullets in run.accepted.values() for c in bullets],
         steps=steps, tool_calls=run.tool_calls, llm_calls=llm.calls,
-        rejected=run.rejected, dropped=run.dropped,
+        rejected=run.rejected, dropped=run.dropped, model_errors=model_errors,
     )
     analysis = MatchAnalysis.model_validate({k: v for k, v in requirements.items() if k != "blockers"})
     return TailoringResult(tailored_resume=resume, match_analysis=analysis), trace

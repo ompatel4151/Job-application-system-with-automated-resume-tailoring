@@ -369,6 +369,11 @@ export interface components {
              * @default 0
              */
             dropped: number;
+            /**
+             * Model Errors
+             * @default 0
+             */
+            model_errors: number;
             /** Fallback */
             fallback?: string | null;
         };

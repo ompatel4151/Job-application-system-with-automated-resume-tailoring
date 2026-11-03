@@ -666,3 +666,33 @@ numbers above, not new rules):
   - It weakens per-project grounding of tool names. It's reported here and
     not fixed, so v1 is measured as built.
 - **Both runs hit the 6-turn cap.**
+
+### Agent v1 on the 30: stopped after 6 JDs (2026-11-02)
+
+**An incomplete run, reported here and not used for the decision.**
+
+- **Command:** `run_eval.py --mode agent --version v1 --run 1`. Stopped by
+  the user's decision after 6 of 30 JDs (swe-01 to swe-06). Runs 2 and 3
+  never started.
+- **5 of 6 completed in agent mode.**
+  - swe-02 fell back to plain mode (reason `error`). The model called a tool
+    that doesn't exist (`repo_draft_bullets`), Groq refused the turn with
+    `tool_use_failed`, and the loop treated that as fatal.
+- **Per tailoring, over the 6:**
+  - tokens: median 18,662 (13,790 to 20,254)
+  - model calls: median 8.5
+  - latency: median 14.2 s, max 15.4 s, with 429 waits excluded
+  - The 5 agent-mode JDs all used the full 6 turns.
+- **Why it was stopped:** each fallback is scored as an agent result but
+  contains plain-mode output. A known bug at about 1 in 6 would dilute every
+  agent metric, and finishing v1 would have cost about 8 more days of
+  free-tier quota.
+- **The fix (v2):**
+  - A turn refused with `tool_use_failed` is shown to the model as "your
+    last tool call was rejected", with the list of real tools. The turn
+    counts toward the 6-turn cap, and the count is in
+    `agent_trace.model_errors`.
+  - Other provider errors still end the run.
+  - Test first; a mutation check (re-raising every 400) fails it.
+- v1's 6 rows stay in `private/runs/agent-v1-run1.jsonl` and aren't scored.
+  **v2 is measured as 3 full runs on all 30.**

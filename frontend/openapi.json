@@ -1144,6 +1144,11 @@
             "title": "Dropped",
             "default": 0
           },
+          "model_errors": {
+            "type": "integer",
+            "title": "Model Errors",
+            "default": 0
+          },
           "fallback": {
             "anyOf": [
               {
