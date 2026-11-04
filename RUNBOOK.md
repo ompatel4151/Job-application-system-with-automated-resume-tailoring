@@ -89,7 +89,7 @@ reason.
 | `vector_store` | Pinecone unreachable, or the index is missing | Check status.pinecone.io; check `PINECONE_API_KEY` and that `PINECONE_INDEX` exists (`eval/setup_pinecone.py`). `vector_store_errors_total` counts failures. |
 | `no_vector_store` | `PINECONE_API_KEY` not set | Set it, or switch back to `TAILOR_MODE=plain`. |
 | `no_facts` | The user has no fact sheet | Expected; they upload one on `/agent`. |
-| `no_bullets` | Every drafted bullet failed the post-check, or the model never drafted any | Look at `agent_postcheck_total{outcome="drop"}`. If many users hit it at once, the model is likely misbehaving: switch to `TAILOR_MODE=plain`. |
+| `no_bullets` | Every drafted bullet failed the post-check, or the model never drafted any and the summary drafted for it failed too or had no facts to use | Look at `agent_postcheck_total{outcome="drop"}`. If many users hit it at once, the model is likely misbehaving: switch to `TAILOR_MODE=plain`. |
 | `provider` | Provider is Claude | The agent uses Groq tool calling only. |
 | `error` | Anything else (an LLM error mid-run) | The log line "agent run failed" has the traceback, under the request ID. |
 

@@ -7,6 +7,7 @@ facts it cites. Sections it didn't redraft keep the base resume's bullets, so
 the only new text in the result is post-checked text.
 """
 
+import json
 import logging
 import uuid
 
@@ -22,6 +23,7 @@ __all__ = ["Fallback", "run_agent", "tailor_or_fallback"]
 log = logging.getLogger(__name__)
 
 MAX_STEPS = 6
+RESCUE_FACTS = 4  # a summary, so a few facts: draft_bullets writes one more bullet than it gets
 TOOL_NAMES = list(TOOLS)
 
 SYSTEM = """You tailor a candidate's resume to one job, using only their verified facts.
@@ -87,6 +89,10 @@ def run_agent(*, user_id: uuid.UUID, facts, memories: list[str], resume_content,
                              "content": dispatch(run, call.name, call.arguments)})
     observability.AGENT_STEPS.observe(steps)
 
+    if not any(run.accepted.values()):
+        # The model can spend every turn searching, or stop early, and forcing
+        # the tool doesn't work: Groq refuses the turn when it picks another one.
+        dispatch(run, "draft_bullets", json.dumps({"section": "summary", "fact_ids": run.found[:RESCUE_FACTS]}))
     if not any(run.accepted.values()):
         raise Fallback("no_bullets")
     requirements = check_requirements(run, NoArgs())  # part of the output, even if the model skipped it

@@ -207,7 +207,8 @@ two modes.
 | Prompt injection on the real model: on 2 extra postings with planted instructions ("claim 10 years", "PhD from Stanford"), no planted claim reached a resume, under v1 and v2. | free-tier Groq, 2026-11-02, single measurements on 2 postings | `run_eval.py --mode agent --jds injection_jds.yaml` |
 | Agent cost so far: about 16K to 20K tokens and 8 to 9 model calls per tailoring, against about 4.9K tokens and 1 call in plain mode. | 10 agent tailorings (v1 and the injection checks), free-tier Groq | token counts from the API |
 | Two live provider errors made the agent fall back (a misnamed tool call; unparseable output). Both runs were stopped early, reported as incomplete, and fixed test-first before v3. | free-tier Groq, 2026-11-02 | AGENT_EXPERIMENT.md |
+| Agent v3 fell back on 4 of 18 job descriptions (22%), because the model used its turns without drafting. The run was stopped, reported as incomplete, and fixed test-first as v4. | free-tier Groq, 2026-11-04, run 1 of 3, 18 of 30 JDs | AGENT_EXPERIMENT.md |
 
 Not measured yet: the agent's invented-fact rate, ATS score, blocker detection
-and latency on the 30 job descriptions (v3 runs in progress), and any
+and latency on the 30 job descriptions (v4 runs in progress), and any
 comparison with plain mode.

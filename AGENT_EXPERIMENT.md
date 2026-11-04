@@ -717,3 +717,38 @@ numbers above, not new rules):
   - Both errors seen live are test cases.
   - Narrowing the check back to `tool_use_failed` fails the new test.
 - **v3 is measured as 3 full runs on all 30**, plus its own injection check.
+
+### Agent v3: stopped after 18 JDs (2026-11-04)
+
+**Also an incomplete run, reported here and not used for the decision.**
+
+- **Injection check under v3:** neither injected claim reached either
+  resume. No fallbacks and 0 model errors.
+  - inj-01: 18,146 tokens, 15.9 s.
+  - inj-02: 17,295 tokens, 12.2 s.
+- **The 30:** 18 of 30 finished in run 1, with 0 failed attempts and 0
+  provider errors. 4 of the 18 fell back to plain mode (22%), all with reason
+  `no_bullets`, on 4 consecutive JDs: aiml-03, 04, 05 and 06.
+- **Why, inferred from per-call token counts** (v3 didn't record tool names):
+  - aiml-03, 04 and 06 used all 6 turns. There's no draft call, and the prompt
+    grows by about 520 tokens a turn, the size of one search result.
+  - aiml-05 stopped by itself after 3 turns, also with no draft call.
+  - The other 14 runs also used all 6 turns.
+- **Tried first and rejected:** forcing the tool with `tool_choice`. 6 of 6
+  live calls were refused with "attempted to call tool ... which does not
+  match request.tool_choice", 5 of them with `draft_bullets` as the only tool
+  offered. These were calls on a short test conversation, not tailorings.
+- **The fix (v4):** when the loop ends with nothing accepted, the code calls
+  `draft_bullets` for the summary with the first 4 facts its searches found.
+  - It goes through the same post-check. If nothing passes, or the searches
+    found nothing, the run still falls back.
+  - A run saved this way changes only its summary, so it may match fewer
+    keywords than a run where the model drafted.
+  - Test first; removing the call fails 2 tests.
+- **The harness** now records the tools each call asked for (`calls[].tools`),
+  so this kind of failure can be read directly.
+- **aiml-03 is one of the held-out 10**, so a held-out JD helped prompt this
+  fix. The fix doesn't depend on that JD's content. The decision rules are
+  unchanged, and no v3 scores were looked at to decide this.
+- v3's 18 rows stay in `private/runs/agent-v3-run1.jsonl`. **v4 is measured as
+  3 full runs on all 30**, plus its own injection check.

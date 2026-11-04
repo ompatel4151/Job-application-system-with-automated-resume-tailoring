@@ -84,6 +84,7 @@ class Run:
     resume: ResumeContent
     memories: list[str]
     accepted: dict[str, list[Citation]] = field(default_factory=dict)
+    found: list[str] = field(default_factory=list)  # fact ids from searches, first seen first
     requirements: dict | None = None
     tool_calls: int = 0
     rejected: int = 0
@@ -115,7 +116,9 @@ def _store(call, *args):
 def search_resume_facts(run: Run, args: SearchArgs) -> dict:
     hits = _store(run.store.search, "fact", args.query, 8)
     # The index can lag the sheet; Postgres decides what exists.
-    return {"facts": [{"id": i, "text": run.facts[i].text} for i, _ in hits if i in run.facts]}
+    known = [i for i, _ in hits if i in run.facts]
+    run.found += [i for i in known if i not in run.found]
+    return {"facts": [{"id": i, "text": run.facts[i].text} for i in known]}
 
 
 def find_similar_jobs(run: Run, args: SearchArgs) -> dict:

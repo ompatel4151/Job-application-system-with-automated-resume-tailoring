@@ -71,6 +71,7 @@ class CallRecorder:
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0),
                 "completion_tokens": getattr(usage, "completion_tokens", 0),
                 "seconds": round(time.perf_counter() - start, 3),
+                "tools": [c.function.name for c in response.choices[0].message.tool_calls or []],
             })
             return response
 

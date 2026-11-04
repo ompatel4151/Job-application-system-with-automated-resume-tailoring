@@ -51,7 +51,7 @@ class ScriptedLLM:
         self.calls += 1
         if schema is Requirements:
             return self.requirements
-        return Drafts.model_validate(self.drafts.pop(0))
+        return Drafts.model_validate(self.drafts.pop(0) if self.drafts else draft())
 
 
 def call(name, **args):
@@ -199,7 +199,7 @@ def test_a_bullet_citing_a_fact_it_was_not_given_is_rejected():
 
 def test_a_model_that_never_stops_gets_exactly_six_turns():
     llm = ScriptedLLM([call("search_resume_facts", query="Redis")] * 20)
-    with pytest.raises(Fallback, match="no_bullets"):
+    with pytest.raises(Fallback, match="no_bullets"):  # the scripted draft is empty
         run(llm)
 
     assert len(llm.seen) == 6
@@ -215,6 +215,44 @@ def test_after_the_cap_it_returns_what_it_has():
 
     assert trace.steps == 6
     assert result.tailored_resume.summary == "Built a Redis Lua token bucket."
+
+
+REDIS_BULLET = draft(("Built a Redis Lua token bucket.", ["jt-redis"]))
+
+
+def test_a_model_that_only_searches_gets_a_summary_drafted_from_what_it_found():
+    """Seen live, v3 aiml-03, 04 and 06: all 6 turns went on searches, so the run fell back."""
+    llm = ScriptedLLM([call("search_resume_facts", query="Redis")] * 20, drafts=[REDIS_BULLET])
+    result, trace = run(llm)
+
+    assert len(llm.seen) == 6
+    assert result.tailored_resume.summary == "Built a Redis Lua token bucket."
+    assert [c.fact_ids for c in trace.citations] == [["jt-redis"]]
+
+
+def test_a_model_that_stops_early_without_drafting_gets_the_same():
+    """Seen live, v3 aiml-05: it stopped after 3 turns with nothing drafted."""
+    llm = ScriptedLLM([call("search_resume_facts", query="Redis")], drafts=[REDIS_BULLET])
+    result, _ = run(llm)
+
+    assert len(llm.seen) == 2
+    assert result.tailored_resume.summary == "Built a Redis Lua token bucket."
+
+
+def test_a_drafted_summary_is_still_post_checked():
+    llm = ScriptedLLM([call("search_resume_facts", query="Redis")],
+                      drafts=[draft(("Led 40 engineers on Redis.", ["jt-redis"])),
+                              draft(("Led 40 engineers on Redis.", ["jt-redis"]))])
+    with pytest.raises(Fallback, match="no_bullets"):
+        run(llm)
+
+
+def test_a_run_that_found_nothing_still_falls_back():
+    llm = ScriptedLLM([call("find_similar_jobs", query="backend")])
+    with pytest.raises(Fallback, match="no_bullets"):
+        run(llm)
+
+    assert llm.calls == 2  # both turns; no draft call, and no requirements call
 
 
 # ---------- 6. prompt injection ----------
