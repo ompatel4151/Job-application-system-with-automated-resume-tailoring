@@ -26,7 +26,7 @@ last restart.
 
 ## 1. Supabase is paused or unreachable
 
-**Has happened:** twice. The free tier pauses a project after about a week
+**Has happened:** three times (the last on 2026-11-03). The free tier pauses a project after about a week
 with no activity.
 
 **Symptoms.**
@@ -47,7 +47,12 @@ with no activity.
    migrations are checked.
 3. Nothing is lost while the project is paused.
 
-**Prevent.** Any request at least once a week keeps the project awake.
+**Prevent.** Any database request at least once a week keeps the project
+awake. `.github/workflows/keepalive.yml` calls `/health/db` (one `SELECT 1`)
+every Monday and Thursday. If it fails, GitHub emails the repo owner. Run it
+by hand from the Actions tab ("Keep the database awake", Run workflow).
+GitHub turns scheduled workflows off after 60 days without commits; re-enable
+it there.
 
 ## 2. The LLM provider fails or is rate-limited
 

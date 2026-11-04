@@ -168,3 +168,28 @@ def test_rate_limit_buckets_are_per_user(client, monkeypatch):
     assert client.get("/api/applications").status_code == 429
     assert client.get("/api/applications", headers=AS_B).status_code == 200
 
+
+
+def test_database_health_needs_no_token_and_runs_a_query(client):
+    """The weekly keep-alive (.github/workflows/keepalive.yml) calls this so the
+    free Supabase project doesn't pause; it has to reach the database."""
+    resp = client.get("/health/db", headers={"Authorization": ""})
+
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok", "database": "ok"}
+
+
+def test_database_health_reports_a_down_database(client):
+    from sqlalchemy.exc import OperationalError
+
+    from app.database import get_db
+    from app.main import app
+
+    class Down:
+        def execute(self, *args):
+            raise OperationalError("SELECT 1", {}, Exception("connection refused"))
+
+    app.dependency_overrides[get_db] = lambda: Down()
+    resp = client.get("/health/db")
+
+    assert resp.status_code == 503

@@ -3,18 +3,20 @@ import math
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import Match
 
 from app import auth, observability, ratelimit
 from app.config import settings
-from app.database import migrate
+from app.database import get_db, migrate
 from app.routers import applications, resumes, tailoring
 
 observability.configure_logging()
@@ -187,6 +189,17 @@ app.include_router(tailoring.router)
 @app.get("/health", tags=["meta"])
 def health():
     return {"status": "ok"}
+
+
+@app.get("/health/db", tags=["meta"])
+def health_db(db: Session = Depends(get_db)):
+    """One trivial query. The scheduled keep-alive calls this, because the free
+    Supabase project pauses after a week without activity (RUNBOOK 1)."""
+    try:
+        db.execute(text("SELECT 1"))
+    except OperationalError:
+        return error_response(503, "Database unreachable.")
+    return {"status": "ok", "database": "ok"}
 
 
 @app.get("/metrics", include_in_schema=False)
