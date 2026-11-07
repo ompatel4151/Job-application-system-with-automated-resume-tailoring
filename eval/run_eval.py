@@ -17,6 +17,7 @@ with "contaminated": true makes the next run re-measure it.
 """
 
 import argparse
+import re
 import time
 from collections import deque
 from pathlib import Path
@@ -48,31 +49,51 @@ def daily(exc) -> bool:
     return "per day" in str(exc).lower() or "tpd" in str(exc).lower()
 
 
+_UNITS = {"h": 3600, "m": 60, "s": 1, "ms": 0.001}
+
+
+def retry_after(exc) -> float:
+    """Groq's hint, e.g. "Please try again in 10m36.768s", in seconds."""
+    hint = re.search(r"try again in ((?:[\d.]+(?:ms|[hms]))+)", str(exc))
+    if not hint:
+        return 600.0
+    return sum(float(n) * _UNITS[u] for n, u in re.findall(r"([\d.]+)(ms|[hms])", hint.group(1)))
+
+
 class InnerWaits:
-    """Agent mode makes several calls per tailoring. A per-minute 429 or a
-    transient error in the middle waits and retries here, timed and taken out
-    of the latency (section 7d), instead of making the agent fall back."""
+    """Agent mode makes several calls per tailoring. A 429 or a transient
+    error in the middle waits and retries here, timed and taken out of the
+    latency (section 7d), instead of making the agent fall back.
+
+    The daily limit is waited out too. Quitting on it threw away the calls the
+    tailoring had already made, and with hourly restarts those wasted calls
+    kept Groq's rolling 24 h window full (2026-11-07: 1 JD in 23 hours)."""
 
     def __init__(self):
         import openai.resources.chat.completions as completions
 
-        self.seconds, self.rate_limited, self.transient = 0.0, 0, 0
+        self.seconds, self.rate_limited, self.transient, self.daily = 0.0, 0, 0, 0
         inner, waits = completions.Completions.create, self
 
         def create(this, *args, **kwargs):
-            for _ in range(30):
+            retries = 0
+            while retries < 30:
                 start = time.perf_counter()
                 try:
                     return inner(this, *args, **kwargs)
                 except openai.RateLimitError as exc:
                     if daily(exc):
-                        raise SystemExit("Daily token quota reached. Re-run the same command tomorrow.") from exc
-                    waits.rate_limited += 1
-                    pause = 30
+                        waits.daily += 1
+                        pause = retry_after(exc) + 5
+                    else:
+                        waits.rate_limited += 1
+                        retries += 1
+                        pause = 30
                 except openai.APIError as exc:
                     if not transient(exc):
                         raise
                     waits.transient += 1
+                    retries += 1
                     pause = 5
                 time.sleep(pause)
                 waits.seconds += time.perf_counter() - start
@@ -80,9 +101,9 @@ class InnerWaits:
 
         completions.Completions.create = create
 
-    def take(self) -> tuple[float, int, int]:
-        taken = (self.seconds, self.rate_limited, self.transient)
-        self.seconds, self.rate_limited, self.transient = 0.0, 0, 0
+    def take(self) -> tuple[float, int, int, int]:
+        taken = (self.seconds, self.rate_limited, self.transient, self.daily)
+        self.seconds, self.rate_limited, self.transient, self.daily = 0.0, 0, 0, 0
         return taken
 
 
@@ -175,7 +196,7 @@ def main():
                 result, trace = MODES[a.mode](base, jd, ctx)
                 latency = time.perf_counter() - start
                 calls = recorder.take()
-                waited, limited, flaky = inner.take() if inner else (0.0, 0, 0)
+                waited, limited, flaky, daily_waits = inner.take() if inner else (0.0, 0, 0, 0)
                 latency -= waited
                 transient_retries += flaky
                 recent.extend((time.time(), c["prompt_tokens"] + c["completion_tokens"]) for c in calls)
@@ -184,7 +205,7 @@ def main():
                     "attempts": attempts, "rate_limit_wait_s": round(rate_limit_waits, 1),
                     "paced_s": round(paced_seconds, 1), "transient_retries": transient_retries,
                     "transient_s": round(transient_seconds, 1), "inner_wait_s": round(waited, 1),
-                    "inner_429s": limited, "result": dump(result, trace),
+                    "inner_429s": limited, "inner_daily_waits": daily_waits, "result": dump(result, trace),
                     "trace": trace.model_dump() if trace else None,
                 })
                 note = f", fell back: {trace.fallback}" if trace and trace.fallback else ""

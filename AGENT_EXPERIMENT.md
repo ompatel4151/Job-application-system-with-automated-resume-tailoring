@@ -752,3 +752,26 @@ numbers above, not new rules):
   unchanged, and no v3 scores were looked at to decide this.
 - v3's 18 rows stay in `private/runs/agent-v3-run1.jsonl`. **v4 is measured as
   3 full runs on all 30**, plus its own injection check.
+
+### Harness fix during v4: the daily-limit trap (2026-11-07)
+
+- **What happened:** v4 run 1 finished 1 JD in 23 hours (aiml-05) while the
+  loop retried every hour. Groq's own message on the next try said this org
+  had used 199,946 of its 200,000 tokens per day on `gpt-oss-120b`.
+- **The cause was the harness.** No other consumer showed up: the live
+  backend had no POST requests in that window, and no Groq key is in git.
+  - Each hourly try started a tailoring and spent a few calls.
+  - It quit on the daily-limit error, throwing those calls away.
+  - Groq's window is a rolling 24 hours, so each hour freed only what the
+    same hour had spent the day before, mostly earlier wasted tries. A full
+    tailoring of about 17,600 tokens never fit.
+  - The size of each wasted try was not measured. It's inferred from the
+    calls a tailoring makes before running out of room.
+- **The fix:** on the daily-limit error, the harness waits the time Groq gives
+  ("try again in 10m36s", plus 5 s) and continues the same call.
+  - The wait is timed and taken out of latency, like other rate-limit waits
+    (section 7d). Rows from now on count these waits in `inner_daily_waits`.
+  - The agent code is unchanged, so the 17 v4 rows stand and v4 goes on. Rows
+    before the fix have no `inner_daily_waits` field.
+  - Test first (`eval/tests/test_run_eval.py`). Putting the quit back fails it.
+
